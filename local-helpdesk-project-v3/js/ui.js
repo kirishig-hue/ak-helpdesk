@@ -124,19 +124,31 @@ const UI = (() => {
 
   // ── Download helper ───────────────────────────────────────────────────────────
   function download(content, type, filename) {
+    // Use data URI - works on GitHub Pages and all browsers including mobile
     try {
+      // For text/csv content (string), encode to base64 data URI
+      if (typeof content === 'string') {
+        const encoded = encodeURIComponent(content);
+        const dataUri = 'data:' + type + ',' + encoded;
+        const a = document.createElement('a');
+        a.href = dataUri;
+        a.download = filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => document.body.removeChild(a), 100);
+        return;
+      }
+      // Fallback for binary content
       const blob = new Blob([content], { type });
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
-      a.href     = url;
-      a.download = filename;
-      a.style.display = 'none';
+      a.href = url; a.download = filename; a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
       setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 300);
     } catch(e) {
       console.error('Download failed:', e);
-      UI.toast('Ошибка скачивания: ' + e.message, 'error');
     }
   }
 
