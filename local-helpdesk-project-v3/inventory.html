@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Инвентарь — АК-Сервис</title>
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo"><div class="logo-icon">АК</div><span class="logo-text">АК-Сервис</span></div>
+  <div class="hdr-sep"></div>
+  <span class="hdr-title">Инвентарь принтеров</span>
+  <div class="hdr-nav" style="margin-left:auto">
+    <a href="index.html">🏠</a>
+    <a href="tickets.html">📱 Заявка</a>
+    <a href="helpdesk.html">🖥 Helpdesk</a>
+  </div>
+  <div style="display:flex;gap:6px;margin-left:8px">
+    <button class="btn btn-ghost" id="btnExportPrinters">↓ CSV принтеры</button>
+    <button class="btn btn-ghost" id="btnExportMileage">↓ CSV пробег</button>
+  </div>
+</div>
+
+<div class="stats-row" id="invStats"></div>
+
+<div class="toolbar">
+  <div class="search-wrap" style="flex:1;max-width:320px">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M15 15l-3.5-3.5"/></svg>
+    <input class="search-input" id="invSearch" placeholder="Поиск принтера…" autocomplete="off">
+  </div>
+  <select class="search-input" id="invBrand" style="max-width:160px;padding-left:10px">
+    <option value="all">Все бренды</option>
+  </select>
+  <select class="search-input" id="invFilter" style="max-width:180px;padding-left:10px">
+    <option value="all">Все принтеры</option>
+    <option value="low">⚠ Картриджей ≤ 2</option>
+    <option value="zero">🔴 Нет картриджа</option>
+    <option value="unk">❓ Не учтено</option>
+  </select>
+</div>
+
+<div class="table-wrap">
+  <table class="table" id="tblInv">
+    <thead><tr>
+      <th data-c="id">#</th>
+      <th data-c="brand">Бренд/Модель</th>
+      <th data-c="location">Расположение</th>
+      <th data-c="owner">Владелец</th>
+      <th data-c="cartridge">Картридж</th>
+      <th data-c="qty" style="text-align:center">На складе</th>
+      <th data-c="total" style="text-align:center">Замен всего</th>
+      <th data-c="last" style="text-align:center">Последняя замена</th>
+    </tr></thead>
+    <tbody id="tbodyInv"></tbody>
+  </table>
+  <div class="empty-state" id="emptyInv" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+    <p>Ничего не найдено</p>
+  </div>
+</div>
+
+<script src="js/storage.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+<script src="js/cartridges.js"></script>
+<script src="js/mileage.js"></script>
+<script>
+let invSearch = '', invBrand = 'all', invFilter = 'all';
+let sortC = 'id', sortD = 1;
+
+App.loadData().then(() => {
+  // Populate brand filter
+  const brands = [...new Set(App.state.printers.map(p => p.brand).filter(Boolean))].sort();
+  const sel = document.getElementById('invBrand');
+  brands.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b; opt.textContent = b;
+    sel.appendChild(opt);
+  });
+  renderStats();
+  renderTable();
+});
+
+function renderStats() {
+  const ps = App.state.printers;
+  const zeroCnt = ps.filter(p => Storage.cart.get(p.id) === 0).length;
+  const lowCnt  = ps.filter(p => { const c = Storage.cart.get(p.id); return c !== null && c > 0 && c <= 2; }).length;
+  const reps    = Storage.replacements.all();
+  const today   = new Date().toLocaleDateString('ru-RU');
+  const todayN  = reps.filter(r => (r.created || '').startsWith(today)).reduce((s,r) => s+(r.qty||1), 0);
+  document.getElementById('invStats').innerHTML =
+    UI.statCard(ps.length, 'Принтеров') +
+    UI.statCard(zeroCnt, 'Нет картриджа', 'var(--rd)') +
+    UI.statCard(lowCnt, 'Критично ≤2', 'var(--am)') +
+    UI.statCard(todayN, 'Замен сегодня', 'var(--gn)');
+}
+
+function getRows() {
+  const q = invSearch.toLowerCase();
+  return App.state.printers.filter(pr => {
+    const cnt = Storage.cart.get(pr.id);
+    if (invBrand !== 'all' && pr.brand !== invBrand) return false;
+    if (invFilter === 'low'  && !(cnt !== null && cnt > 0 && cnt <= 2)) return false;
+    if (invFilter === 'zero' && cnt !== 0)   return false;
+    if (invFilter === 'unk'  && cnt !== null) return false;
+    if (q) return ['brand','model','location','owner','cartridge'].some(k => (pr[k]||'').toLowerCase().includes(q));
+    return true;
+  }).sort((a, b) => {
+    let av, bv;
+    if (sortC === 'id')    { av = a.id;      bv = b.id; }
+    else if (sortC === 'qty')   { av = Storage.cart.get(a.id) ?? -1; bv = Storage.cart.get(b.id) ?? -1; }
+    else if (sortC === 'total') { av = Storage.replacements.total(a.id); bv = Storage.replacements.total(b.id); }
+    else { av = (a[sortC]||'').toLowerCase(); bv = (b[sortC]||'').toLowerCase(); }
+    return av < bv ? -sortD : av > bv ? sortD : 0;
+  });
+}
+
+function renderTable() {
+  const rows = getRows();
+  document.getElementById('emptyInv').style.display = rows.length ? 'none' : 'block';
+  document.getElementById('tblInv').style.display   = rows.length ? 'table' : 'none';
+  document.getElementById('tbodyInv').innerHTML = rows.map(pr => {
+    const cnt  = Storage.cart.get(pr.id);
+    const tot  = Storage.replacements.total(pr.id);
+    const last = Storage.replacements.all().find(r => String(r.printerId) === String(pr.id));
+    return `<tr>
+      <td class="mono text-muted">${pr.id}</td>
+      <td><div class="td-name">${UI.esc(pr.brand)} ${UI.esc(pr.model)}</div><div class="td-sub">${UI.esc(pr.type||'')}</div></td>
+      <td style="font-size:12px;color:var(--t2)">${UI.esc(pr.location||'')}${pr.cabinet?'<br>каб.'+UI.esc(pr.cabinet):''}</td>
+      <td style="font-size:12px;color:var(--t2)">${UI.esc(pr.owner||'—')}</td>
+      <td style="font-size:11px;color:var(--accent)">${UI.esc(pr.cartridge||'—')}</td>
+      <td style="text-align:center">
+        <div style="display:flex;align-items:center;justify-content:center;gap:4px">
+          <button class="adj-btn" data-pid="${pr.id}" data-d="-1">−</button>
+          <span id="icc_${pr.id}">${UI.stockHTML(cnt)}</span>
+          <button class="adj-btn" data-pid="${pr.id}" data-d="1">+</button>
+        </div>
+      </td>
+      <td style="text-align:center;color:var(--t2)">${tot||'—'}</td>
+      <td style="text-align:center;font-size:12px;color:var(--t3)">${last ? last.created.split(',')[0] : '—'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tbodyInv').querySelectorAll('.adj-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pid = +btn.dataset.pid;
+      Storage.cart.adjust(pid, +btn.dataset.d);
+      const el = document.getElementById('icc_' + pid);
+      if (el) el.innerHTML = UI.stockHTML(Storage.cart.get(pid));
+    });
+  });
+}
+
+// ── Sort ──────────────────────────────────────────────────────────────────────
+UI.wireSortHeaders('tblInv', (c, d) => { sortC = c; sortD = d; renderTable(); });
+
+// ── Filters ───────────────────────────────────────────────────────────────────
+document.getElementById('invSearch').addEventListener('input', function () { invSearch = this.value; renderTable(); });
+document.getElementById('invBrand').addEventListener('change', function ()  { invBrand = this.value;  renderTable(); });
+document.getElementById('invFilter').addEventListener('change', function () { invFilter = this.value; renderTable(); });
+
+// ── CSV exports ───────────────────────────────────────────────────────────────
+document.getElementById('btnExportPrinters').addEventListener('click', () => {
+  const headers = ['#','Бренд','Модель','Тип','Серийный','Расположение','Кабинет','Владелец','Картридж','На складе','Статус'];
+  const rows = App.state.printers.map(pr => {
+    const cnt = Storage.cart.get(pr.id);
+    return [pr.id, pr.brand, pr.model, pr.type, pr.serial, pr.location, pr.cabinet, pr.owner, pr.cartridge, cnt === null ? 'н/д' : cnt, pr.status];
+  });
+  UI.downloadCsv(rows, headers, 'printers_' + new Date().toISOString().slice(0,10) + '.csv');
+});
+
+document.getElementById('btnExportMileage').addEventListener('click', Mileage.exportCsv);
+</script>
+</body>
+</html>

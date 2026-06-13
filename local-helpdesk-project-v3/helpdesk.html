@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>IT Helpdesk — АК-Сервис</title>
+<link rel="stylesheet" href="css/main.css">
+<style>
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo"><div class="logo-icon">АК</div><span class="logo-text">АК-Сервис</span></div>
+  <div class="hdr-sep"></div>
+  <span class="hdr-title">IT Helpdesk</span>
+  <div class="hdr-nav" style="margin-left:auto">
+    <a href="index.html">🏠</a>
+    <a href="tickets.html">📱 Заявка</a>
+    <a href="inventory.html">🖨 Инвентарь</a>
+  </div>
+  <div style="display:flex;gap:6px;margin-left:8px;flex-wrap:wrap">
+    <button class="btn btn-ghost active" id="tabTicketsBtn">📋 Заявки</button>
+    <button class="btn btn-ghost" id="tabCartBtn">🖨 Картриджи</button>
+    <button class="btn btn-ghost" id="btnRefresh">⟳</button>
+    <button class="btn btn-ghost" id="btnCsv">↓ CSV</button>
+  </div>
+</div>
+
+<!-- TICKETS TAB -->
+<div class="tab-pane active" id="paneTickets">
+  <div class="stats-row" id="statsRow"></div>
+  <div class="toolbar">
+    <div class="filter-group" id="filterBtns">
+      <button class="filter-btn active" data-s="all">Все</button>
+      <button class="filter-btn" data-s="Новая">Новые</button>
+      <button class="filter-btn" data-s="В работе">В работе</button>
+      <button class="filter-btn" data-s="Решено">Решено</button>
+      <button class="filter-btn" data-s="Закрыта">Закрыты</button>
+    </div>
+    <div class="search-wrap">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M15 15l-3.5-3.5"/></svg>
+      <input class="search-input" id="hdSearch" placeholder="Поиск…" autocomplete="off">
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="table" id="tblTickets">
+      <thead><tr>
+        <th data-c="id">№</th>
+        <th data-c="created">Дата</th>
+        <th data-c="name">Сотрудник</th>
+        <th data-c="category">Категория</th>
+        <th data-c="priority">Приоритет</th>
+        <th data-c="description">Описание</th>
+        <th data-c="status">Статус</th>
+      </tr></thead>
+      <tbody id="tbodyTickets"></tbody>
+    </table>
+    <div class="empty-state" id="emptyTickets" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      <p>Заявок нет</p>
+    </div>
+  </div>
+</div>
+
+<!-- CART TAB -->
+<div class="tab-pane" id="paneCart">
+  <div class="stats-row" id="cartStatsRow"></div>
+  <div class="toolbar">
+    <div class="search-wrap" style="flex:1;max-width:280px">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M15 15l-3.5-3.5"/></svg>
+      <input class="search-input" id="cartSearch" placeholder="Поиск принтера…" autocomplete="off">
+    </div>
+    <select class="search-input" id="cartFilter" style="max-width:200px;padding-left:10px">
+      <option value="all">Все принтеры</option>
+      <option value="low">⚠ Остаток ≤ 2</option>
+      <option value="zero">🔴 Нет на складе</option>
+      <option value="unk">❓ Не учтено</option>
+    </select>
+    <button class="btn btn-secondary" id="btnCartCsv">↓ CSV склад</button>
+  </div>
+  <div class="table-wrap">
+    <table class="table" id="tblCart">
+      <thead><tr>
+        <th>Принтер</th><th>Расположение</th><th>Владелец</th><th>Картридж</th>
+        <th style="text-align:center">На складе</th>
+        <th style="text-align:center">Сегодня</th>
+        <th style="text-align:center">Всего замен</th>
+      </tr></thead>
+      <tbody id="tbodyCart"></tbody>
+    </table>
+  </div>
+  <div class="p-4">
+    <div style="font-size:15px;font-weight:700;margin-bottom:12px">Журнал замен</div>
+    <table class="table" id="tblRep" style="display:none">
+      <thead><tr>
+        <th>Дата</th><th>Сотрудник</th><th>Принтер</th><th>Картридж</th>
+        <th style="text-align:center">Кол-во</th>
+      </tr></thead>
+      <tbody id="tbodyRep"></tbody>
+    </table>
+    <div class="empty-state" id="emptyRep">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      <p>Замен ещё не было</p>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" style="display:none"><div class="modal" id="modal"></div></div>
+
+<script src="js/storage.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+<script src="js/tickets.js"></script>
+<script src="js/cartridges.js"></script>
+<script src="js/sla.js"></script>
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let curTab = 'tickets';
+let cartSearch = '', cartFilter = 'all';
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+UI.modal.init();
+
+App.loadData().then(() => {
+  renderAll();
+  setInterval(() => curTab === 'cart' ? renderCart() : renderAll(), 30000);
+});
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  curTab = tab;
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById(tab === 'tickets' ? 'paneTickets' : 'paneCart').classList.add('active');
+  document.getElementById('tabTicketsBtn').classList.toggle('active', tab === 'tickets');
+  document.getElementById('tabCartBtn').classList.toggle('active', tab === 'cart');
+  tab === 'cart' ? renderCart() : renderAll();
+}
+
+document.getElementById('tabTicketsBtn').addEventListener('click', () => switchTab('tickets'));
+document.getElementById('tabCartBtn').addEventListener('click',    () => switchTab('cart'));
+document.getElementById('btnRefresh').addEventListener('click', () => curTab === 'cart' ? renderCart() : renderAll());
+document.getElementById('btnCsv').addEventListener('click', Tickets.exportCsv);
+document.getElementById('btnCartCsv').addEventListener('click', Cartridges.exportStockCsv);
+
+// ── Tickets tab ───────────────────────────────────────────────────────────────
+function renderAll() {
+  const ts = Storage.tickets.all();
+  // Stats
+  const n = ts.filter(t => t.status === 'Новая').length;
+  const w = ts.filter(t => t.status === 'В работе').length;
+  const d = ts.filter(t => t.status === 'Решено').length;
+  document.getElementById('statsRow').innerHTML =
+    UI.statCard(ts.length, 'Всего заявок') +
+    UI.statCard(n, 'Новые', '#1D4ED8') +
+    UI.statCard(w, 'В работе', 'var(--am)') +
+    UI.statCard(d, 'Решено', 'var(--gn)');
+
+  Tickets.renderTable({
+    tbodyId: 'tbodyTickets', emptyId: 'emptyTickets', tableId: 'tblTickets',
+    onRowClick: t => Tickets.openDetailModal(t, renderAll, renderAll),
+  });
+  Tickets.updateFilterCounts('filterBtns');
+}
+
+// Filter + search + sort
+UI.wireFilterGroup('filterBtns', s => { Tickets.setFilter(s); renderAll(); });
+document.getElementById('hdSearch').addEventListener('input', function () { Tickets.setSearch(this.value); renderAll(); });
+UI.wireSortHeaders('tblTickets', (c, d) => { Tickets.setSort(c, d); renderAll(); });
+
+// ── Cart tab ──────────────────────────────────────────────────────────────────
+function renderCart() {
+  Cartridges.renderCartStats('cartStatsRow');
+  Cartridges.renderStockTable({ tbodyId: 'tbodyCart', searchQ: cartSearch, filter: cartFilter });
+  Cartridges.renderRepLog({ tbodyId: 'tbodyRep', tableId: 'tblRep', emptyId: 'emptyRep' });
+}
+
+document.getElementById('cartSearch').addEventListener('input', function () { cartSearch = this.value; Cartridges.renderStockTable({ tbodyId: 'tbodyCart', searchQ: cartSearch, filter: cartFilter }); });
+document.getElementById('cartFilter').addEventListener('change', function () { cartFilter = this.value; Cartridges.renderStockTable({ tbodyId: 'tbodyCart', searchQ: cartSearch, filter: cartFilter }); });
+</script>
+</body>
+</html>
