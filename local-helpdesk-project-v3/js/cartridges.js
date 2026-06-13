@@ -1,8 +1,21 @@
 /**
- * cartridges.js — замена картриджей, учёт склада, журнал замен
+ * cartridges.js — замена картриджей, учёт склада по артикулу
+ *
+ * Склад хранится по артикулу (pr.cartridge), а не по ID принтера.
+ * Замена у любого принтера с этим картриджем уменьшает общий остаток.
  */
 
 const Cartridges = (() => {
+
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+  function getCount(pr) {
+    return Storage.cart.getByArticle(pr.cartridge);
+  }
+  function stockCls(n) {
+    if (n === null) return '';
+    return n === 0 ? 'zero' : n <= 2 ? 'low' : '';
+  }
+
   // ── Render replacement cards (ticket form) ────────────────────────────────────
   function renderReplaceCards(containerId, printers, personName) {
     const wrap = document.getElementById(containerId);
@@ -15,19 +28,18 @@ const Cartridges = (() => {
     printers.forEach(pr => {
       const isLabel = ['Zebra','SATO','Honeywell','CST','Mertech'].includes(pr.brand);
       const lbl = isLabel ? 'Риббон/лента' : 'Картридж';
-
       const item = document.createElement('div');
       item.className = 'crc-item';
       item.dataset.pid = pr.id;
 
       function renderItem() {
-        const cnt = Storage.cart.get(pr.id);
+        const cnt = getCount(pr);
         const todayCnt = Storage.replacements.today(pr.id);
-        const cntCls = cnt === null ? '' : cnt === 0 ? 'zero' : cnt <= 2 ? 'low' : 'ok';
+        const cntCls = stockCls(cnt);
         const cntTxt = cnt === null ? '?' : String(cnt);
 
         item.innerHTML = `
-          <div class="crc-top" data-pid="${pr.id}">
+          <div class="crc-top">
             <div class="device-radio" id="crcr_${pr.id}"></div>
             <div style="font-size:20px;width:26px;text-align:center;flex-shrink:0">${UI.brandIcon(pr.brand)}</div>
             <div class="pi-info">
@@ -55,7 +67,7 @@ const Cartridges = (() => {
           card.querySelectorAll('.device-radio').forEach(r => r.classList.remove('on'));
           item.classList.add('selected');
           item.querySelector('.device-radio').classList.add('on');
-          window._crcSelectedDevice = `${pr.brand} ${pr.model}${pr.location ? ' (' + pr.location + ')' : ''}`;
+          window._crcSelectedDevice = `${pr.brand} ${pr.model}${pr.location ? ' (' + pr.location + (pr.cabinet ? ' каб.' + pr.cabinet : '') + ')' : ''}`;
         });
 
         // Wire replace button
@@ -63,23 +75,23 @@ const Cartridges = (() => {
         if (btn) {
           btn.addEventListener('click', e => {
             e.stopPropagation();
-            const cur = Storage.cart.get(pr.id);
-            if (cur !== null && cur <= 0) return;
+            const cur = getCount(pr);
+            if (cur !== null && cur <= 0) { renderItem(); return; }
 
-            // Deduct from stock
-            Storage.cart.adjust(pr.id, -1);
+            // ── Списываем 1 с общего остатка по артикулу ──
+            Storage.cart.adjustByArticle(pr.cartridge, -1);
 
-            // Log replacement
+            // Log
             Storage.replacements.add({
               ts:          Date.now(),
               created:     App.nowStr(),
               printerId:   pr.id,
               printerName: `${pr.brand} ${pr.model}`,
-              location:    pr.location || '',
-              cabinet:     pr.cabinet  || '',
+              location:    pr.location  || '',
+              cabinet:     pr.cabinet   || '',
               cartridge:   pr.cartridge || '',
-              owner:       pr.owner    || '',
-              person:      personName  || '',
+              owner:       pr.owner     || '',
+              person:      personName   || '',
               qty:         1,
             });
 
@@ -90,10 +102,26 @@ const Cartridges = (() => {
             item.querySelector('.device-radio').classList.add('on');
             window._crcSelectedDevice = `${pr.brand} ${pr.model}${pr.location ? ' (' + pr.location + ')' : ''}`;
 
-            // Flash confirmation
+            // Flash and re-render ALL items with same cartridge (shared stock)
             btn.textContent = '✅ Списано!';
             btn.style.background = 'var(--gn)';
             btn.disabled = true;
+
+            // Re-render all items in this card that share same cartridge article
+            card.querySelectorAll('.crc-item').forEach(otherItem => {
+              const otherId = +otherItem.dataset.pid;
+              const otherPr = App.state.printers.find(p => p.id === otherId);
+              if (otherPr && otherPr.cartridge === pr.cartridge && otherId !== pr.id) {
+                // Refresh stock display for siblings immediately
+                const cnt2 = getCount(otherPr);
+                const valEl = otherItem.querySelector('.crc-stock-val');
+                if (valEl) {
+                  valEl.textContent = cnt2 === null ? '?' : String(cnt2);
+                  valEl.className = 'crc-stock-val ' + stockCls(cnt2);
+                }
+              }
+            });
+
             setTimeout(renderItem, 1200);
           });
         }
@@ -107,22 +135,34 @@ const Cartridges = (() => {
     wrap.appendChild(card);
   }
 
-  function getSelectedDevice() {
-    return window._crcSelectedDevice || null;
-  }
-  function resetSelected() {
-    window._crcSelectedDevice = null;
-  }
+  function getSelectedDevice() { return window._crcSelectedDevice || null; }
+  function resetSelected()     { window._crcSelectedDevice = null; }
 
-  // ── Render stock table (helpdesk cart tab) ────────────────────────────────────
+  // ── Stock table (helpdesk / inventory) ────────────────────────────────────────
+  // Группировка по артикулу — одна строка на уникальный картридж
   function renderStockTable({ tbodyId, searchQ = '', filter = 'all' }) {
-    const q = searchQ.toLowerCase();
-    const rows = App.state.printers.filter(pr => {
-      const cnt = Storage.cart.get(pr.id);
+    const q = (searchQ || '').toLowerCase();
+
+    // Build unique articles from printers
+    const articleMap = {};
+    App.state.printers.forEach(pr => {
+      const art = (pr.cartridge || '').trim();
+      if (!art || art === '—') return;
+      if (!articleMap[art]) {
+        articleMap[art] = { article: art, printers: [], cnt: Storage.cart.getByArticle(art) };
+      }
+      articleMap[art].printers.push(pr);
+    });
+
+    let rows = Object.values(articleMap).filter(row => {
+      const cnt = row.cnt;
       if (filter === 'low'  && !(cnt !== null && cnt > 0 && cnt <= 2)) return false;
       if (filter === 'zero' && cnt !== 0)   return false;
       if (filter === 'unk'  && cnt !== null) return false;
-      if (q) return ['model','location','owner','cartridge'].some(k => (pr[k] || '').toLowerCase().includes(q));
+      if (q) {
+        return row.article.toLowerCase().includes(q) ||
+          row.printers.some(p => (p.model||'').toLowerCase().includes(q) || (p.location||'').toLowerCase().includes(q) || (p.owner||'').toLowerCase().includes(q));
+      }
       return true;
     });
 
@@ -130,24 +170,25 @@ const Cartridges = (() => {
     if (!tbody) return;
 
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:24px">Ничего не найдено</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:24px">Ничего не найдено</td></tr>';
       return;
     }
 
-    tbody.innerHTML = rows.map(pr => {
-      const cnt = Storage.cart.get(pr.id);
-      const tod = Storage.replacements.today(pr.id);
-      const tot = Storage.replacements.total(pr.id);
+    tbody.innerHTML = rows.map(row => {
+      const cnt   = row.cnt;
+      const tod   = Storage.replacements.todayByArticle(row.article);
+      const tot   = Storage.replacements.totalByArticle(row.article);
+      const names = [...new Set(row.printers.map(p => `${p.brand} ${p.model}`))].join(', ');
+      const owners = [...new Set(row.printers.map(p => p.owner).filter(Boolean))].join(', ');
       return `<tr>
-        <td><div class="td-name">${UI.esc(pr.brand)} ${UI.esc(pr.model)}</div><div class="td-sub">${UI.esc(pr.type || '')}</div></td>
-        <td style="font-size:12px;color:var(--t2)">${UI.esc(pr.location || '')}${pr.cabinet ? '<br>каб.' + UI.esc(pr.cabinet) : ''}</td>
-        <td style="font-size:12px;color:var(--t2)">${UI.esc(pr.owner || '—')}</td>
-        <td style="font-size:11px;color:var(--accent)">${UI.esc(pr.cartridge || '—')}</td>
+        <td style="font-size:12px;color:var(--accent);font-weight:600">${UI.esc(row.article)}</td>
+        <td style="font-size:12px;color:var(--t2)">${UI.esc(names)}<div class="td-sub">${row.printers.length} принт.</div></td>
+        <td style="font-size:12px;color:var(--t2)">${UI.esc(owners || '—')}</td>
         <td style="text-align:center">
           <div style="display:flex;align-items:center;justify-content:center;gap:5px">
-            <button class="adj-btn" data-pid="${pr.id}" data-d="-1">−</button>
-            <span id="hcc_${pr.id}">${UI.stockHTML(cnt)}</span>
-            <button class="adj-btn" data-pid="${pr.id}" data-d="1">+</button>
+            <button class="adj-btn" data-art="${UI.esc(row.article)}" data-d="-1">−</button>
+            <span id="hcc_${UI.esc(row.article)}">${UI.stockHTML(cnt)}</span>
+            <button class="adj-btn" data-art="${UI.esc(row.article)}" data-d="1">+</button>
           </div>
         </td>
         <td style="text-align:center;font-weight:600;color:${tod ? 'var(--accent)' : 'var(--t3)'}">${tod || '—'}</td>
@@ -157,15 +198,15 @@ const Cartridges = (() => {
 
     tbody.querySelectorAll('.adj-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const pid = +btn.dataset.pid;
-        Storage.cart.adjust(pid, +btn.dataset.d);
-        const el = document.getElementById('hcc_' + pid);
-        if (el) el.innerHTML = UI.stockHTML(Storage.cart.get(pid));
+        const art = btn.dataset.art;
+        Storage.cart.adjustByArticle(art, +btn.dataset.d);
+        const el = document.getElementById('hcc_' + art);
+        if (el) el.innerHTML = UI.stockHTML(Storage.cart.getByArticle(art));
       });
     });
   }
 
-  // ── Render replacements log ───────────────────────────────────────────────────
+  // ── Replacements log ──────────────────────────────────────────────────────────
   function renderRepLog({ tbodyId, tableId, emptyId, limit = 100 }) {
     const reps = Storage.replacements.all();
     if (tableId) document.getElementById(tableId).style.display = reps.length ? 'table' : 'none';
@@ -182,34 +223,48 @@ const Cartridges = (() => {
     ).join('');
   }
 
-  // ── Render stats cards (cart tab) ─────────────────────────────────────────────
+  // ── Stats cards ───────────────────────────────────────────────────────────────
   function renderCartStats(containerId) {
-    const printers = App.state.printers;
+    // Unique articles
+    const articles = [...new Set(App.state.printers.map(p => p.cartridge).filter(Boolean))];
     const reps = Storage.replacements.all();
     const today = new Date().toLocaleDateString('ru-RU');
     const todaySum = reps.filter(r => (r.created || '').startsWith(today)).reduce((s, r) => s + (r.qty || 1), 0);
-    const zeroCnt = printers.filter(p => Storage.cart.get(p.id) === 0).length;
-    const lowCnt  = printers.filter(p => { const c = Storage.cart.get(p.id); return c !== null && c > 0 && c <= 2; }).length;
+    const zeroCnt  = articles.filter(a => Storage.cart.getByArticle(a) === 0).length;
+    const lowCnt   = articles.filter(a => { const c = Storage.cart.getByArticle(a); return c !== null && c > 0 && c <= 2; }).length;
 
     document.getElementById(containerId).innerHTML =
-      UI.statCard(printers.length, 'Принтеров') +
+      UI.statCard(App.state.printers.length, 'Принтеров') +
       UI.statCard(zeroCnt, 'Нет картриджа', 'var(--rd)') +
-      UI.statCard(lowCnt, 'Критично ≤2', 'var(--am)') +
+      UI.statCard(lowCnt,  'Критично ≤2', 'var(--am)') +
       UI.statCard(todaySum, 'Замен сегодня', 'var(--gn)');
   }
 
-  // ── CSV export (stock) ────────────────────────────────────────────────────────
+  // ── CSV stock ─────────────────────────────────────────────────────────────────
   function exportStockCsv() {
-    const headers = ['#','Бренд','Модель','Расположение','Кабинет','Владелец','Картридж','На складе','Сегодня','Всего'];
-    const rows = App.state.printers.map(pr => {
-      const cnt = Storage.cart.get(pr.id);
-      return [pr.id, pr.brand, pr.model, pr.location, pr.cabinet, pr.owner, pr.cartridge,
-              cnt === null ? 'н/д' : cnt, Storage.replacements.today(pr.id), Storage.replacements.total(pr.id)];
+    const articleMap = {};
+    App.state.printers.forEach(pr => {
+      const art = (pr.cartridge || '').trim();
+      if (!art || art === '—') return;
+      if (!articleMap[art]) articleMap[art] = { article: art, printers: [] };
+      articleMap[art].printers.push(pr);
+    });
+
+    const headers = ['Артикул/картридж','Принтеры','Кол-во принтеров','На складе','Замен сегодня','Замен всего'];
+    const rows = Object.values(articleMap).map(row => {
+      const cnt   = Storage.cart.getByArticle(row.article);
+      const names = [...new Set(row.printers.map(p => `${p.brand} ${p.model}`))].join('; ');
+      return [row.article, names, row.printers.length, cnt === null ? 'н/д' : cnt,
+              Storage.replacements.todayByArticle(row.article),
+              Storage.replacements.totalByArticle(row.article)];
     });
     UI.downloadCsv(rows, headers, 'cartridges_' + new Date().toISOString().slice(0,10) + '.csv');
   }
 
-  return { renderReplaceCards, getSelectedDevice, resetSelected, renderStockTable, renderRepLog, renderCartStats, exportStockCsv };
+  return {
+    renderReplaceCards, getSelectedDevice, resetSelected,
+    renderStockTable, renderRepLog, renderCartStats, exportStockCsv,
+  };
 })();
 
 window.Cartridges = Cartridges;

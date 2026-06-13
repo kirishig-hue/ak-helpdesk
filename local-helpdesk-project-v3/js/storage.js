@@ -1,77 +1,180 @@
 /**
- * storage.js — все операции с localStorage
- * Ключи: hd_tickets, hd_cartstock, hd_replacements, hd_overrides, hd_stock_seeded
+ * storage.js — хранилище с синхронизацией через JSONBin.io
+ *
+ * НАСТРОЙКА (один раз):
+ * 1. Зарегистрируйтесь на https://jsonbin.io (бесплатно)
+ * 2. Создайте bin с начальным JSON: {"tickets":[],"cartstock":{},"replacements":[],"overrides":{}}
+ * 3. Скопируйте BIN_ID и API_KEY в CONFIG ниже
+ *
+ * Пока CONFIG не заполнен — работает через localStorage (только локально).
  */
 
+const CONFIG = {
+  BIN_ID:  '6a2d350bf5f4af5e29eb3358',
+  API_KEY: '$2a$10$f63xB98VcO..SoUEwpXEzOVrg3H3hAUPG99SP7QMGq1y5uvcVTTmu',
+  SYNC_INTERVAL: 30000,
+};
+
 const Storage = (() => {
-  function get(key, def = null) {
+
+  // ── Локальный кэш (всегда актуален, пишем сразу) ─────────────────────────────
+  let _cache = null;
+
+  function _defaultData() {
+    return { tickets: [], cartstock: {}, replacements: [], overrides: {} };
+  }
+
+  function _fromLocal() {
+    try { return JSON.parse(localStorage.getItem('hd_data') || 'null') || _defaultData(); }
+    catch { return _defaultData(); }
+  }
+  function _toLocal(data) {
+    try { localStorage.setItem('hd_data', JSON.stringify(data)); } catch {}
+  }
+
+  function _data() {
+    if (!_cache) _cache = _fromLocal();
+    return _cache;
+  }
+  function _save() {
+    _toLocal(_cache);
+    // Async push to JSONBin (fire-and-forget)
+    if (CONFIG.BIN_ID && CONFIG.API_KEY) _push();
+  }
+
+  // ── JSONBin API ───────────────────────────────────────────────────────────────
+  let _syncing = false;
+  let _pendingSync = false;
+
+  async function _push() {
+    if (_syncing) { _pendingSync = true; return; }
+    _syncing = true;
     try {
-      const v = localStorage.getItem(key);
-      return v === null ? def : JSON.parse(v);
-    } catch { return def; }
+      await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.BIN_ID}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Key': CONFIG.API_KEY,
+          'X-Bin-Versioning': 'false',
+        },
+        body: JSON.stringify(_cache),
+      });
+    } catch (e) { console.warn('JSONBin push failed:', e); }
+    _syncing = false;
+    if (_pendingSync) { _pendingSync = false; _push(); }
   }
-  function set(key, val) {
-    try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+
+  async function _pull() {
+    if (!CONFIG.BIN_ID || !CONFIG.API_KEY) return;
+    try {
+      const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.BIN_ID}/latest`, {
+        headers: { 'X-Master-Key': CONFIG.API_KEY },
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      const remote = json.record || {};
+      // Merge: remote is source of truth, but add any local tickets not yet in remote
+      if (remote.tickets) {
+        // Add local tickets missing from remote (created offline)
+        const remoteIds = new Set((remote.tickets || []).map(t => t.id));
+        const localOnly = (_cache.tickets || []).filter(t => !remoteIds.has(t.id));
+        remote.tickets = [...localOnly, ...(remote.tickets || [])];
+      }
+      _cache = { ..._defaultData(), ...remote };
+      _toLocal(_cache);
+      _notifyListeners();
+    } catch (e) { console.warn('JSONBin pull failed:', e); }
   }
-  function remove(key) {
-    try { localStorage.removeItem(key); } catch {}
+
+  // ── Change listeners (для авто-обновления UI) ─────────────────────────────────
+  const _listeners = new Set();
+  function _notifyListeners() { _listeners.forEach(fn => fn()); }
+  function onSync(fn) { _listeners.add(fn); return () => _listeners.delete(fn); }
+
+  // ── Public init ───────────────────────────────────────────────────────────────
+  async function init() {
+    _cache = _fromLocal();
+    await _pull();  // первичная синхронизация
+
+    if (CONFIG.BIN_ID && CONFIG.API_KEY && CONFIG.SYNC_INTERVAL > 0) {
+      setInterval(_pull, CONFIG.SYNC_INTERVAL);
+    }
+
+    // Seed stock
+    if (!_data().stockSeeded) {
+      // Будет вызван из app.js
+    }
+  }
+
+  function isConfigured() {
+    return !!(CONFIG.BIN_ID && CONFIG.API_KEY);
   }
 
   // ── Tickets ─────────────────────────────────────────────────────────────────
   const tickets = {
-    all:    ()      => get('hd_tickets', []),
-    save:   (arr)   => set('hd_tickets', arr),
-    find:   (id)    => tickets.all().find(t => t.id === id) || null,
-    add(ticket) {
-      const arr = tickets.all();
-      arr.unshift(ticket);
-      tickets.save(arr);
+    all:    ()    => _data().tickets || [],
+    find:   (id)  => tickets.all().find(t => t.id === id) || null,
+    add(t) {
+      _data().tickets.unshift(t);
+      _save();
     },
     update(id, fields) {
-      const arr = tickets.all();
-      const i = arr.findIndex(t => t.id === id);
-      if (i >= 0) { arr[i] = { ...arr[i], ...fields }; tickets.save(arr); }
+      const a = tickets.all(), i = a.findIndex(t => t.id === id);
+      if (i >= 0) { a[i] = { ...a[i], ...fields }; _save(); }
     },
     remove(id) {
-      tickets.save(tickets.all().filter(t => t.id !== id));
+      _data().tickets = tickets.all().filter(t => t.id !== id);
+      _save();
     },
   };
 
-  // ── Cart stock ───────────────────────────────────────────────────────────────
+  // ── Cart stock — по артикулу картриджа ──────────────────────────────────────
   const cart = {
-    all:          ()          => get('hd_cartstock', {}),
-    save:         (s)         => set('hd_cartstock', s),
-    get(pid) {
-      const v = cart.all()[String(pid)];
+    _s: () => _data().cartstock || {},
+
+    getByArticle(article) {
+      if (!article) return null;
+      const v = cart._s()[article];
       return v !== undefined ? Number(v) : null;
     },
-    set(pid, n) {
-      const s = cart.all();
-      s[String(pid)] = Math.max(0, n);
-      cart.save(s);
+    getByPrinter(pr) {
+      return cart.getByArticle(pr.cartridge);
     },
-    adjust(pid, delta) {
-      cart.set(pid, (cart.get(pid) || 0) + delta);
+    setByArticle(article, n) {
+      if (!article) return;
+      _data().cartstock[article] = Math.max(0, n);
+      _save();
     },
-    seedOnce(seedData) {
-      if (get('hd_stock_seeded', false)) return;
-      const s = cart.all();
-      for (const k in seedData) {
-        if (s[k] === undefined) s[k] = seedData[k];
+    adjustByArticle(article, delta) {
+      const cur = cart.getByArticle(article);
+      cart.setByArticle(article, (cur === null ? 0 : cur) + delta);
+    },
+    // Обёртки для inventory (adj-кнопки по артикулу уже используют data-art)
+    getByPid(pid, printers) {
+      const pr = (printers || App.state.printers).find(p => p.id === +pid);
+      return pr ? cart.getByPrinter(pr) : null;
+    },
+    adjustByPid(pid, delta, printers) {
+      const pr = (printers || App.state.printers).find(p => p.id === +pid);
+      if (pr && pr.cartridge) cart.adjustByArticle(pr.cartridge, delta);
+    },
+    seedOnce(seedByArticle) {
+      if (_data().stockSeeded) return;
+      const s = cart._s();
+      for (const art in seedByArticle) {
+        if (s[art] === undefined) s[art] = seedByArticle[art];
       }
-      cart.save(s);
-      set('hd_stock_seeded', true);
+      _data().stockSeeded = true;
+      _save();
     },
   };
 
-  // ── Replacements log ─────────────────────────────────────────────────────────
+  // ── Replacements ─────────────────────────────────────────────────────────────
   const replacements = {
-    all:  ()       => get('hd_replacements', []),
-    save: (arr)    => set('hd_replacements', arr),
+    all:  () => _data().replacements || [],
     add(entry) {
-      const arr = replacements.all();
-      arr.unshift(entry);
-      replacements.save(arr);
+      _data().replacements.unshift(entry);
+      _save();
     },
     today(pid) {
       const t = new Date().toLocaleDateString('ru-RU');
@@ -84,23 +187,36 @@ const Storage = (() => {
         .filter(r => String(r.printerId) === String(pid))
         .reduce((s, r) => s + (r.qty || 1), 0);
     },
-  };
-
-  // ── Employee overrides ───────────────────────────────────────────────────────
-  const overrides = {
-    all:          ()          => get('hd_overrides', {}),
-    get(name)     { return overrides.all()[name] || {}; },
-    set(name, fields) {
-      const d = overrides.all();
-      d[name] = { ...d[name], ...fields };
-      set('hd_overrides', d);
+    todayByArticle(article) {
+      const t = new Date().toLocaleDateString('ru-RU');
+      return replacements.all()
+        .filter(r => r.cartridge === article && (r.created || '').startsWith(t))
+        .reduce((s, r) => s + (r.qty || 1), 0);
     },
-    clear(name)   { const d = overrides.all(); delete d[name]; set('hd_overrides', d); },
-    hasAny(name)  { return Object.keys(overrides.get(name)).length > 0; },
+    totalByArticle(article) {
+      return replacements.all()
+        .filter(r => r.cartridge === article)
+        .reduce((s, r) => s + (r.qty || 1), 0);
+    },
   };
 
-  return { get, set, remove, tickets, cart, replacements, overrides };
+  // ── Overrides ─────────────────────────────────────────────────────────────────
+  const overrides = {
+    _d: () => _data().overrides || {},
+    get(name)         { return overrides._d()[name] || {}; },
+    set(name, fields) { _data().overrides[name] = { ...overrides.get(name), ...fields }; _save(); },
+    clear(name)       { delete _data().overrides[name]; _save(); },
+    hasAny(name)      { return Object.keys(overrides.get(name)).length > 0; },
+  };
+
+  // ── Legacy localStorage helpers (для совместимости) ───────────────────────────
+  function get(key, def = null) {
+    try { const v = localStorage.getItem(key); return v === null ? def : JSON.parse(v); }
+    catch { return def; }
+  }
+  function set(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+
+  return { init, isConfigured, onSync, pull: _pull, tickets, cart, replacements, overrides, get, set };
 })();
 
-// Make available globally
 window.Storage = Storage;
