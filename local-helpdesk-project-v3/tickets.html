@@ -108,6 +108,9 @@
   <!-- My devices -->
   <div id="myDevicesSection" style="margin-bottom:14px"></div>
 
+  <!-- My replacements history -->
+  <div id="myReplacementsSection" style="margin-bottom:14px"></div>
+
   <!-- Profile -->
   <div class="card mb-4" id="profileCard"></div>
 
@@ -244,6 +247,9 @@ function selectPerson(person) {
 
   // My devices section
   Devices.renderSection('myDevicesSection', selectedPerson.name);
+
+  // My replacements history
+  renderMyReplacements(selectedPerson.name);
 
   // My tickets preview
   renderMyTicketsPreview();
@@ -442,6 +448,39 @@ document.getElementById('btnNewTicket').addEventListener('click', () => {
   document.getElementById('searchResults').style.display = 'none';
   showPage('pageSearch');
 });
+
+// ── My replacements history ──────────────────────────────────────────────────
+function renderMyReplacements(personName) {
+  const sec = document.getElementById('myReplacementsSection');
+  if (!sec) return;
+  const reps = Storage.replacements.all()
+    .filter(r => r.person === personName)
+    .slice(0, 20);
+
+  if (!reps.length) { sec.innerHTML = ''; return; }
+
+  sec.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:16px;font-weight:700">История замен картриджей
+        <span style="font-size:13px;color:var(--t3);font-weight:400;margin-left:6px">(${reps.length})</span>
+      </div>
+    </div>
+    <div style="background:#fff;border:1.5px solid var(--bd);border-radius:var(--r);overflow:hidden">
+      ${reps.map(r => `
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 13px;border-bottom:1px solid var(--bd)">
+          <div style="font-size:18px;flex-shrink:0">🖨️</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600">${UI.esc(r.printerName || '—')}</div>
+            <div style="font-size:11px;color:var(--accent);margin-top:1px">${UI.esc(r.cartridge || '—')}</div>
+            ${r.location ? `<div style="font-size:11px;color:var(--t3)">📍 ${UI.esc(r.location)}</div>` : ''}
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:11px;color:var(--t3)">${UI.esc(r.created || '')}</div>
+            <div style="font-size:12px;font-weight:600;color:var(--gn);margin-top:2px">−${r.qty || 1} шт.</div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
 
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
