@@ -1,89 +1,29 @@
 [
   {
-    "article": "HP 207X / CS-W222xX",
-    "qty": 0,
-    "stock_per_printer": {
-      "1": 0,
-      "2": 0
-    },
-    "printers": [
-      1,
-      2
-    ]
-  },
-  {
-    "article": "HP 81X / CS-CF281X",
-    "qty": 12,
-    "stock_per_printer": {
-      "3": 12
-    },
-    "printers": [
-      3
-    ]
-  },
-  {
-    "article": "HP 26X / CS-CF283X-MPSXL",
-    "qty": 7,
-    "stock_per_printer": {},
-    "printers": []
-  },
-  {
-    "article": "HP 30X / CS-CF230X",
-    "qty": 0,
-    "stock_per_printer": {
-      "5": 0
-    },
-    "printers": [
-      5
-    ]
-  },
-  {
-    "article": "HP 55X / CS-CE255XS",
-    "qty": 1,
-    "stock_per_printer": {
-      "6": 1,
-      "7": 1,
-      "8": 1,
-      "9": 1,
-      "10": 1,
-      "11": 1
-    },
-    "printers": [
-      6,
-      7,
-      8,
-      9,
-      10,
-      11
-    ]
-  },
-  {
     "article": "Canon 054H / CS-C054H",
     "qty": 1,
-    "stock_per_printer": {
-      "12": 1
-    },
     "printers": [
       12
     ]
   },
   {
+    "article": "Canon 737 / CS-CF283X",
+    "qty": 7,
+    "printers": [
+      28
+    ]
+  },
+  {
+    "article": "Canon EP-703 / CS-EP703",
+    "qty": 0,
+    "printers": [
+      22,
+      29
+    ]
+  },
+  {
     "article": "Canon FX-10 / CS-FX10-MPS",
     "qty": 9,
-    "stock_per_printer": {
-      "13": 9,
-      "14": 9,
-      "16": 9,
-      "17": 9,
-      "18": 9,
-      "19": 9,
-      "20": 9,
-      "21": 9,
-      "26": 9,
-      "27": 9,
-      "30": 9,
-      "15": 9
-    },
     "printers": [
       13,
       14,
@@ -96,31 +36,68 @@
       26,
       27,
       30,
-      15,
-      13,
-      14
+      15
     ]
   },
   {
-    "article": "Canon EP-703 / CS-EP703",
-    "qty": 0,
-    "stock_per_printer": {
-      "22": 0,
-      "29": 0
-    },
+    "article": "Epson 101 / CS-EPT03V14A",
+    "qty": 1,
     "printers": [
-      22,
-      29
+      38,
+      40
+    ]
+  },
+  {
+    "article": "Epson 103 / CS-EPT03V",
+    "qty": 1,
+    "printers": [
+      37
+    ]
+  },
+  {
+    "article": "HP 207X / CS-W222xX",
+    "qty": 0,
+    "printers": [
+      1,
+      2
+    ]
+  },
+  {
+    "article": "HP 26X / CS-CF226X",
+    "qty": 3,
+    "printers": [
+      4
+    ]
+  },
+  {
+    "article": "HP 30X / CS-CF230X",
+    "qty": 0,
+    "printers": [
+      5
+    ]
+  },
+  {
+    "article": "HP 55X / CS-CE255XS",
+    "qty": 1,
+    "printers": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  {
+    "article": "HP 81X / CS-CF281X",
+    "qty": 12,
+    "printers": [
+      3
     ]
   },
   {
     "article": "HP 83X / CS-CF283X-MPSXL",
     "qty": 7,
-    "stock_per_printer": {
-      "23": 7,
-      "24": 7,
-      "25": 7
-    },
     "printers": [
       23,
       24,
@@ -128,92 +105,66 @@
     ]
   },
   {
-    "article": "Canon 737 / CS-CF283X",
-    "qty": 7,
-    "stock_per_printer": {
-      "28": 7
-    },
-    "printers": [
-      28
-    ]
-  },
-  {
-    "article": "TK-1270 / N-TK-1270",
-    "qty": 1,
-    "stock_per_printer": {
-      "31": 1
-    },
-    "printers": [
-      31
-    ]
-  },
-  {
     "article": "TK-1150 / CS-TK1150-MPS",
     "qty": 4,
-    "stock_per_printer": {
-      "32": 4,
-      "33": 4,
-      "36": 4
-    },
     "printers": [
       32,
-      33,
       33,
       36
     ]
   },
   {
+    "article": "TK-1270 / N-TK-1270",
+    "qty": 1,
+    "printers": [
+      31
+    ]
+  },
+  {
     "article": "TK-3430 / CS-TK3430",
     "qty": 12,
-    "stock_per_printer": {
-      "35": 12
-    },
     "printers": [
       35
     ]
   },
   {
-    "article": "Epson 103 / CS-EPT03V",
-    "qty": 1,
-    "stock_per_printer": {
-      "37": 1
-    },
-    "printers": [
-      37
-    ]
-  },
-  {
-    "article": "Epson 101 / CS-EPT03V14A",
-    "qty": 1,
-    "stock_per_printer": {
-      "38": 1,
-      "40": 1
-    },
-    "printers": [
-      38,
-      40
-    ]
-  },
-  {
     "article": "TNP-75/76 / CET TNP75/76 + Драм IUP-34",
     "qty": 3,
-    "stock_per_printer": {
-      "41": 3,
-      "42": 3
-    },
     "printers": [
       41,
       42
     ]
   },
   {
-    "article": "CS-CF226X",
-    "qty": 3,
-    "stock_per_printer": {
-      "4": 3
-    },
+    "article": "Риббон + термоэтикетка",
+    "qty": 0,
     "printers": [
-      4
+      44,
+      45,
+      47,
+      54,
+      55,
+      56
+    ]
+  },
+  {
+    "article": "Термолента / риббон + термоэтикетка",
+    "qty": 0,
+    "printers": [
+      53
+    ]
+  },
+  {
+    "article": "Термолента / термоэтикетка",
+    "qty": 0,
+    "printers": [
+      43,
+      48,
+      49,
+      50,
+      51,
+      52,
+      57
     ]
   }
 ]
