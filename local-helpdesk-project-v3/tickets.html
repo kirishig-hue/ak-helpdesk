@@ -105,6 +105,9 @@
   <!-- My tickets -->
   <div id="myTicketsSection"></div>
 
+  <!-- My devices -->
+  <div id="myDevicesSection" style="margin-bottom:14px"></div>
+
   <!-- Profile -->
   <div class="card mb-4" id="profileCard"></div>
 
@@ -191,6 +194,7 @@
 <script src="js/tickets.js"></script>
 <script src="js/printers.js"></script>
 <script src="js/cartridges.js"></script>
+<script src="js/devices.js"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let selectedPerson = null;
@@ -237,6 +241,9 @@ function selectPerson(person) {
 
   // Profile card
   document.getElementById('profileCard').innerHTML = Employees.profileCardHTML(selectedPerson);
+
+  // My devices section
+  Devices.renderSection('myDevicesSection', selectedPerson.name);
 
   // My tickets preview
   renderMyTicketsPreview();
@@ -424,7 +431,10 @@ document.getElementById('btnBack').addEventListener('click', () => {
   document.getElementById('searchResults').style.display = 'none';
   showPage('pageSearch');
 });
-document.getElementById('btnBackToForm').addEventListener('click', () => showPage('pageForm'));
+document.getElementById('btnBackToForm').addEventListener('click', () => {
+  showPage('pageForm');
+  if (selectedPerson) Devices.renderSection('myDevicesSection', selectedPerson.name);
+});
 document.getElementById('btnMyTickets').addEventListener('click', showMyTicketsPage);
 document.getElementById('btnViewTickets').addEventListener('click', showMyTicketsPage);
 document.getElementById('btnNewTicket').addEventListener('click', () => {

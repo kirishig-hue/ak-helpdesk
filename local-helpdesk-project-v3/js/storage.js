@@ -15,7 +15,7 @@ const Storage = (() => {
   let _cache = null;
 
   function _default() {
-    return { tickets: [], cartstock: {}, replacements: [], overrides: {}, stockSeeded: false };
+    return { tickets: [], cartstock: {}, replacements: [], overrides: {}, devices: {}, stockSeeded: false };
   }
   function _fromLocal() {
     try { return JSON.parse(localStorage.getItem('hd_data') || 'null') || _default(); }
@@ -209,6 +209,33 @@ const Storage = (() => {
     hasAny(name)      { return Object.keys(overrides.get(name)).length > 0; },
   };
 
+  // ── Devices (инвентарь техники пользователей) ───────────────────────────────
+  // devices[employeeName] = [ {id, type, brand, model, serial, inv, location, note, added} ]
+  const devices = {
+    _d: () => { if (!_data().devices) _data().devices = {}; return _data().devices; },
+    forEmployee(name)  { return devices._d()[name] || []; },
+    set(name, list)    { devices._d()[name] = list; _save(); },
+    add(name, device)  {
+      const list = devices.forEmployee(name);
+      list.push({ ...device, id: Date.now(), added: new Date().toLocaleDateString('ru-RU') });
+      devices.set(name, list);
+    },
+    update(name, id, fields) {
+      const list = devices.forEmployee(name).map(d => d.id === id ? { ...d, ...fields } : d);
+      devices.set(name, list);
+    },
+    remove(name, id)   { devices.set(name, devices.forEmployee(name).filter(d => d.id !== id)); },
+    // Все устройства всех сотрудников (для инвентаризации)
+    all() {
+      const result = [];
+      const d = devices._d();
+      for (const name in d) {
+        (d[name] || []).forEach(dev => result.push({ ...dev, owner: name }));
+      }
+      return result;
+    },
+  };
+
   // ── Legacy helpers ────────────────────────────────────────────────────────────
   function get(key, def = null) {
     try { const v = localStorage.getItem(key); return v === null ? def : JSON.parse(v); }
@@ -216,7 +243,7 @@ const Storage = (() => {
   }
   function set(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
 
-  return { init, isConfigured, onSync, pull: _pull, tickets, cart, replacements, overrides, get, set };
+  return { init, isConfigured, onSync, pull: _pull, tickets, cart, replacements, overrides, devices, get, set };
 })();
 
 window.Storage = Storage;
