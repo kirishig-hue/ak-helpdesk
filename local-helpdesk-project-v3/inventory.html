@@ -199,8 +199,10 @@ document.getElementById('invFilter').addEventListener('change', function () { in
 document.getElementById('btnExportPrinters').addEventListener('click', () => {
   const headers = ['#','Бренд','Модель','Тип','Серийный','Расположение','Кабинет','Владелец','Картридж','На складе','Статус'];
   const rows = App.state.printers.map(pr => {
-    const cnt = Storage.cart.get(pr.id);
-    return [pr.id, pr.brand, pr.model, pr.type, pr.serial, pr.location, pr.cabinet, pr.owner, pr.cartridge, cnt === null ? 'н/д' : cnt, pr.status];
+    const cnt = Storage.cart.getByArticle(pr.cartridge);
+    // Normalize owner: replace newlines/semicolons with comma+space for clean CSV
+    const owner = (pr.owner || '').replace(/[\n;]+/g, ', ').trim();
+    return [pr.id, pr.brand, pr.model, pr.type, pr.serial, pr.location, pr.cabinet, owner, pr.cartridge, cnt === null ? 'н/д' : cnt, pr.status];
   });
   UI.downloadCsv(rows, headers, 'printers_' + new Date().toISOString().slice(0,10) + '.csv');
 });
