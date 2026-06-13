@@ -170,7 +170,7 @@ let cartSrch = '', cartFil = 'all', devSearch = '', devTypeFil = 'all';
 // ── Init ──────────────────────────────────────────────────────────────────────
 UI.modal.init();
 
-Storage.init().then(() => App.loadData()).then(() => {
+App.loadData().then(() => { Storage.init();
   // Populate device type filter
   const sel = document.getElementById('devTypeFilter');
   Devices.TYPES.forEach(t => {

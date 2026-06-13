@@ -69,9 +69,13 @@ const Storage = (() => {
     if (!CONFIG.BIN_ID || !CONFIG.API_KEY) return;
     try {
       _notifyListeners('syncing');
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
       const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.BIN_ID}/latest`, {
         headers: { 'X-Master-Key': CONFIG.API_KEY },
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
       if (!res.ok) {
         console.error('JSONBin pull error:', res.status);
         _notifyListeners('error');

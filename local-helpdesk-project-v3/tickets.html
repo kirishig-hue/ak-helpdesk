@@ -236,9 +236,8 @@ let _st = null;
 UI.modal.init();
 UI.sheet.init();
 
-Storage.init().then(() => App.loadData()).then(() => {
-  document.getElementById('syncWarn').style.display = Storage.isConfigured() ? 'none' : 'flex';
-  // Wire search events for all input methods including mobile keyboards
+// Wire search IMMEDIATELY — not inside async chain
+(function() {
   const empEl = document.getElementById('empSearch');
   if (empEl) {
     ['input','keyup','change','compositionend'].forEach(ev => {
@@ -249,6 +248,14 @@ Storage.init().then(() => App.loadData()).then(() => {
       if (res && res.innerHTML) res.style.display = 'block';
     }, 250));
   }
+})();
+
+// Load data — search will start returning results once this completes
+App.loadData().then(() => {
+  const warn = document.getElementById('syncWarn');
+  if (warn) warn.style.display = Storage.isConfigured() ? 'none' : 'flex';
+  // Init storage sync in background (non-blocking)
+  Storage.init();
 });
 
 

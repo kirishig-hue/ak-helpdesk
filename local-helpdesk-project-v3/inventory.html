@@ -75,7 +75,7 @@
 let invSearch = '', invBrand = 'all', invFilter = 'all';
 let sortC = 'id', sortD = 1;
 
-Storage.init().then(() => App.loadData()).then(() => {
+App.loadData().then(() => { Storage.init();
   // Populate brand filter
   const brands = [...new Set(App.state.printers.map(p => p.brand).filter(Boolean))].sort();
   const sel = document.getElementById('invBrand');
