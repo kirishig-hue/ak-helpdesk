@@ -52,8 +52,12 @@ const App = (() => {
   // ── Printer helpers ───────────────────────────────────────────────────────
   function printersForEmployee(name, cat) {
     const isLabel = pr => ['Zebra','SATO','Honeywell','CST','Mertech'].includes(pr.brand);
+    const n = (name || '').trim();
     return state.printers.filter(pr => {
-      if (!pr.owner || pr.owner.trim() !== (name || '').trim()) return false;
+      if (!pr.owner) return false;
+      // owner may contain multiple names separated by newline, comma or semicolon
+      const owners = pr.owner.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
+      if (!owners.some(o => o === n)) return false;
       if (cat === 'Принтер / МФУ') return !isLabel(pr);
       return true;
     });
