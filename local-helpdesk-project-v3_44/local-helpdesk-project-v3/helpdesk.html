@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>IT Helpdesk — АК-Сервис</title>
+<link rel="stylesheet" href="css/main.css">
+<style>
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+/* Cart tab toolbar stacked on mobile */
+@media(max-width:599px){
+  .cart-toolbar{flex-direction:column}
+  .cart-toolbar .search-wrap{width:100%}
+  .cart-toolbar select.search-input{width:100%}
+}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo"><div class="logo-icon">АК</div><span class="logo-text">АК-Сервис</span></div>
+  <div class="hdr-sep"></div>
+  <span class="hdr-title">Helpdesk</span>
+  <div class="hdr-actions">
+    <span class="sync-badge" id="syncBadge"><span class="sync-dot" id="syncDot"></span><span id="syncLabel">…</span></span>
+    <button class="btn btn-ghost" id="btnRefresh">⟳</button>
+    <button class="btn btn-ghost" id="btnCsv">↓</button>
+  </div>
+  <div class="hdr-tabs">
+    <button class="btn btn-ghost active" id="tabTicketsBtn">📋 Заявки</button>
+    <button class="btn btn-ghost" id="tabCartBtn">🖨 Картриджи</button>
+    <button class="btn btn-ghost" id="tabDevBtn">📦 Техника</button>
+    <a class="btn btn-ghost" href="tickets.html">📱 Заявка</a>
+    <a class="btn btn-ghost" href="inventory.html">🖨 Инвентарь</a>
+  </div>
+</div>
+
+  <!-- Sync status banner -->
+  <div id="syncBanner" style="display:none;background:#FEF3C7;border-bottom:1px solid #FCD34D;padding:6px 16px;font-size:12px;color:#92400E;display:flex;align-items:center;gap:8px">
+    <span>⚠️</span>
+    <span id="syncMsg">Синхронизация не настроена. Данные хранятся локально — другие пользователи не увидят изменения.</span>
+    <a href="#" id="syncHelp" style="color:#92400E;font-weight:600;margin-left:auto;white-space:nowrap">Как настроить?</a>
+  </div>
+
+<!-- TICKETS TAB -->
+<div class="tab-pane active" id="paneTickets">
+  <div class="stats-row" id="statsRow"></div>
+  <div class="toolbar">
+    <div class="filter-group" id="filterBtns">
+      <button class="filter-btn active" data-s="all">Все</button>
+      <button class="filter-btn" data-s="Новая">Новые</button>
+      <button class="filter-btn" data-s="В работе">В работе</button>
+      <button class="filter-btn" data-s="Решено">Решено</button>
+      <button class="filter-btn" data-s="Закрыта">Закрыты</button>
+    </div>
+    <div class="search-wrap">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M15 15l-3.5-3.5"/></svg>
+      <input class="search-input" id="hdSearch" placeholder="Поиск…" autocomplete="off">
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="table" id="tblTickets">
+      <thead><tr>
+        <th data-c="id">№</th>
+        <th data-c="created">Дата</th>
+        <th data-c="name">Сотрудник</th>
+        <th data-c="category">Категория</th>
+        <th data-c="priority">Приоритет</th>
+        <th data-c="description">Описание</th>
+        <th data-c="status">Статус</th>
+      </tr></thead>
+      <tbody id="tbodyTickets"></tbody>
+    </table>
+    <div class="empty-state" id="emptyTickets" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      <p>Заявок нет</p>
+    </div>
+  </div>
+</div>
+
+<!-- CART TAB -->
+<div class="tab-pane" id="paneCart">
+  <div class="stats-row" id="cartStatsRow"></div>
+  <div class="toolbar cart-toolbar">
+    <div class="search-wrap">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M15 15l-3.5-3.5"/></svg>
+      <input class="search-input" id="cartSearch" placeholder="Поиск принтера / картриджа…" autocomplete="off">
+    </div>
+    <select class="search-input" id="cartBrandFilter" style="padding-left:10px">
+      <option value="all">Все бренды</option>
+    </select>
+    <select class="search-input" id="cartFilter" style="padding-left:10px">
+      <option value="all">Все принтеры</option>
+      <option value="low">⚠ Остаток ≤ 2</option>
+      <option value="zero">🔴 Нет на складе</option>
+      <option value="unk">❓ Не учтено</option>
+    </select>
+    <button class="btn btn-secondary" id="btnCartCsv">↓ CSV</button>
+  </div>
+  <div class="table-wrap">
+    <table class="table" id="tblCart">
+      <thead><tr>
+        <th>Картридж / артикул</th><th>Принтеры</th><th>Владельцы</th>
+        <th style="text-align:center">На складе</th>
+        <th style="text-align:center">Сегодня</th>
+        <th style="text-align:center">Всего замен</th>
+      </tr></thead>
+      <tbody id="tbodyCart"></tbody>
+    </table>
+  </div>
+  <div class="p-4">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:15px;font-weight:700">Журнал замен</div>
+      <button id="btnToggleRep" class="btn btn-secondary btn-sm">👁 Показать</button>
+    </div>
+    <div id="repSection" style="display:none">
+    <table class="table" id="tblRep" style="display:none">
+      <thead><tr>
+        <th>Дата</th><th>Сотрудник</th><th>Принтер</th><th>Картридж</th>
+        <th style="text-align:center">Кол-во</th>
+      </tr></thead>
+      <tbody id="tbodyRep"></tbody>
+    </table>
+    <div class="empty-state" id="emptyRep">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      <p>Замен ещё не было</p>
+    </div><!-- /repSection -->
+  </div>
+</div>
+
+<!-- DEVICES PANE -->
+<div class="tab-pane" id="paneDevices">
+  <div class="toolbar cart-toolbar">
+    <div class="search-wrap">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M15 15l-3.5-3.5"/></svg>
+      <input class="search-input" id="devSearch" placeholder="Поиск по сотруднику, модели…" autocomplete="off">
+    </div>
+    <select class="search-input" id="devTypeFilter" style="padding-left:10px">
+      <option value="all">Все типы</option>
+    </select>
+    <button class="btn btn-secondary" id="btnExportDevices">↓ CSV инвентарь</button>
+  </div>
+  <div class="stats-row" id="devStats" style="margin-bottom:0"></div>
+  <div class="table-wrap" style="margin-top:14px">
+    <table class="table" id="tblDevices">
+      <thead><tr>
+        <th>Тип</th>
+        <th>Устройство</th>
+        <th>Серийный №</th>
+        <th>Инв. №</th>
+        <th>Сотрудник</th>
+        <th>Расположение</th>
+        <th>Примечание</th>
+        <th>Добавлено</th>
+      </tr></thead>
+      <tbody id="tbodyDevices"></tbody>
+    </table>
+    <div class="empty-state" id="emptyDevices">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7"/></svg>
+      <p>Техника ещё не добавлена сотрудниками</p>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" style="display:none"><div class="modal" id="modal"></div></div>
+
+<script src="js/storage.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+<script src="js/employees.js"></script>
+<script src="js/tickets.js"></script>
+<script src="js/cartridges.js"></script>
+<script src="js/devices.js"></script>
+<script src="js/sla.js"></script>
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let curTab = 'tickets', fStatus = 'all', fSearch = '', sortC = 'ts', sortD = -1;
+let cartSrch = '', cartFil = 'all', cartBrand = 'all', devSearch = '', devTypeFil = 'all';
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+UI.modal.init();
+
+App.loadData().then(() => { Storage.init();
+  // Populate device type filter
+  const sel = document.getElementById('devTypeFilter');
+  Devices.TYPES.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id; opt.textContent = t.icon + ' ' + t.label;
+    sel.appendChild(opt);
+  });
+  // Populate cart brand filter
+  (function() {
+    const sel = document.getElementById('cartBrandFilter');
+    if (!sel) return;
+    const brands = [...new Set(App.state.printers.map(p => p.brand).filter(Boolean))].sort();
+    brands.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b; opt.textContent = b;
+      sel.appendChild(opt);
+    });
+  })();
+  renderAll();
+  setInterval(() => { if (curTab==='cart') renderCart(); else if (curTab==='devices') renderDevicesTab(); else renderAll(); }, 30000);
+});
+
+// ── Sync indicator ────────────────────────────────────────────────────────────
+function updateSyncBadge(state) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  if (!dot || !lbl) return;
+  if (!Storage.isConfigured()) { dot.className='sync-dot err'; lbl.textContent='Не настроено'; return; }
+  if (state==='syncing') { dot.className='sync-dot spin'; lbl.textContent='Синхронизация…'; }
+  else if (state==='error') { dot.className='sync-dot err'; lbl.textContent='Ошибка синхр.'; }
+  else { dot.className='sync-dot ok'; lbl.textContent='Синхр. '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}); }
+}
+updateSyncBadge(Storage.isConfigured() ? 'ok' : 'err');
+Storage.onSync(state => {
+  updateSyncBadge(state);
+  if (curTab==='cart') renderCart();
+  else if (curTab==='devices') renderDevicesTab();
+  else renderAll();
+});
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  curTab = tab;
+  ['paneTickets','paneCart','paneDevices'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+  const paneMap = { tickets:'paneTickets', cart:'paneCart', devices:'paneDevices' };
+  const pane = document.getElementById(paneMap[tab]);
+  if (pane) pane.classList.add('active');
+
+  ['tabTicketsBtn','tabCartBtn','tabDevBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+  const btnMap = { tickets:'tabTicketsBtn', cart:'tabCartBtn', devices:'tabDevBtn' };
+  const btn = document.getElementById(btnMap[tab]);
+  if (btn) btn.classList.add('active');
+
+  if (tab==='cart') renderCart();
+  else if (tab==='devices') renderDevicesTab();
+  else renderAll();
+}
+
+document.getElementById('tabTicketsBtn').addEventListener('click', () => switchTab('tickets'));
+document.getElementById('tabCartBtn').addEventListener('click',    () => switchTab('cart'));
+document.getElementById('tabDevBtn').addEventListener('click',     () => switchTab('devices'));
+document.getElementById('btnRefresh').addEventListener('click', () => {
+  if (curTab==='cart') renderCart();
+  else if (curTab==='devices') renderDevicesTab();
+  else renderAll();
+});
+(function(){var _el=document.getElementById('btnCsv');if(_el)_el.addEventListener('click',Tickets.exportCsv);})();
+(function(){var _el=document.getElementById('btnCartCsv');if(_el)_el.addEventListener('click',Cartridges.exportStockCsv);})();
+(function(){var _el=document.getElementById('btnExportDevices');if(_el)_el.addEventListener('click',Devices.exportCsv);})();
+
+// ── Tickets tab ───────────────────────────────────────────────────────────────
+function renderAll() {
+  const ts = Storage.tickets.all();
+  const n = ts.filter(t=>t.status==='Новая').length;
+  const w = ts.filter(t=>t.status==='В работе').length;
+  const d = ts.filter(t=>t.status==='Решено').length;
+  document.getElementById('statsRow').innerHTML =
+    UI.statCard(ts.length,'Всего заявок') +
+    UI.statCard(n,'Новые','#1D4ED8') +
+    UI.statCard(w,'В работе','var(--am)') +
+    UI.statCard(d,'Решено','var(--gn)');
+  Tickets.renderTable({
+    tbodyId:'tbodyTickets', emptyId:'emptyTickets', tableId:'tblTickets',
+    onRowClick: t => Tickets.openDetailModal(t, renderAll, renderAll),
+  });
+  Tickets.updateFilterCounts('filterBtns');
+}
+
+UI.wireFilterGroup('filterBtns', s => { Tickets.setFilter(s); renderAll(); });
+document.getElementById('hdSearch').addEventListener('input', function() { Tickets.setSearch(this.value); renderAll(); });
+UI.wireSortHeaders('tblTickets', (c,d) => { Tickets.setSort(c,d); renderAll(); });
+
+// ── Cart tab ──────────────────────────────────────────────────────────────────
+function renderCart() {
+  Cartridges.renderCartStats('cartStatsRow');
+  Cartridges.renderStockTable({ tbodyId:'tbodyCart', searchQ:cartSrch, filter:cartFil, brand:cartBrand });
+  Cartridges.renderRepLog({ tbodyId:'tbodyRep', tableId:'tblRep', emptyId:'emptyRep' });
+}
+// Toggle journal visibility
+(function(){
+  const btn = document.getElementById('btnToggleRep');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const sec = document.getElementById('repSection');
+    const visible = sec.style.display !== 'none';
+    sec.style.display = visible ? 'none' : 'block';
+    btn.textContent = visible ? '👁 Показать' : '🙈 Скрыть';
+  });
+})();
+
+document.getElementById('cartSearch').addEventListener('input', function() { cartSrch=this.value; Cartridges.renderStockTable({tbodyId:'tbodyCart',searchQ:cartSrch,filter:cartFil,brand:cartBrand}); });
+document.getElementById('cartFilter').addEventListener('change', function() { cartFil=this.value; Cartridges.renderStockTable({tbodyId:'tbodyCart',searchQ:cartSrch,filter:cartFil,brand:cartBrand}); });
+document.getElementById('cartBrandFilter').addEventListener('change', function() { cartBrand=this.value; Cartridges.renderStockTable({tbodyId:'tbodyCart',searchQ:cartSrch,filter:cartFil,brand:cartBrand}); });
+
+// ── Devices tab ───────────────────────────────────────────────────────────────
+function renderDevicesTab() {
+  const all = Storage.devices.all();
+  const byType = {};
+  all.forEach(d => { byType[d.type]=(byType[d.type]||0)+1; });
+  const topTypes = Object.entries(byType).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  document.getElementById('devStats').innerHTML =
+    UI.statCard(all.length,'Всего устройств') +
+    topTypes.map(([type,cnt]) => {
+      const t = Devices.TYPES.find(x=>x.id===type)||{icon:'🔧',label:type};
+      return UI.statCard(cnt, t.label);
+    }).join('');
+
+  const q = devSearch.toLowerCase();
+  const rows = all.filter(d => {
+    if (devTypeFil!=='all' && d.type!==devTypeFil) return false;
+    if (q) return ['owner','brand','model','serial','inv','location'].some(k=>(d[k]||'').toLowerCase().includes(q));
+    return true;
+  });
+
+  document.getElementById('emptyDevices').style.display = rows.length ? 'none' : 'block';
+  document.getElementById('tblDevices').style.display   = rows.length ? 'table' : 'none';
+  document.getElementById('tbodyDevices').innerHTML = rows.map(d => {
+    const t = Devices.TYPES.find(x=>x.id===d.type)||{icon:'🔧',label:d.type||'Другое'};
+    return `<tr>
+      <td><span style="font-size:16px">${t.icon}</span> <span style="font-size:12px;color:var(--t2)">${UI.esc(t.label)}</span></td>
+      <td><div class="td-name">${UI.esc(d.brand||'')} ${UI.esc(d.model||'')}</div></td>
+      <td class="mono" style="font-size:12px;color:var(--t2)">${UI.esc(d.serial||'—')}</td>
+      <td class="mono" style="font-size:12px;color:var(--t2)">${UI.esc(d.inv||'—')}</td>
+      <td style="font-size:13px;font-weight:600">${UI.esc(d.owner||'—')}</td>
+      <td style="font-size:12px;color:var(--t2)">${UI.esc(d.location||'—')}</td>
+      <td style="font-size:12px;color:var(--t2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${UI.esc(d.note||'')}">${UI.esc(d.note||'—')}</td>
+      <td style="font-size:11px;color:var(--t3);white-space:nowrap">${UI.esc(d.added||'')}</td>
+    </tr>`;
+  }).join('');
+}
+document.getElementById('devSearch').addEventListener('input', function() { devSearch=this.value; renderDevicesTab(); });
+document.getElementById('devTypeFilter').addEventListener('change', function() { devTypeFil=this.value; renderDevicesTab(); });
+</script>
+
+  <!-- Sync setup modal -->
+  <div id="syncSetupOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#fff;border-radius:14px;max-width:480px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:8px">Настройка общего склада</h2>
+      <p style="font-size:13px;color:#4A5568;line-height:1.6;margin-bottom:16px">
+        Для синхронизации остатков картриджей между всеми пользователями используется <b>JSONBin.io</b> — бесплатный облачный JSON-хостинг.
+      </p>
+      <ol style="font-size:13px;color:#4A5568;line-height:2;padding-left:18px;margin-bottom:16px">
+        <li>Зарегистрируйтесь на <a href="https://jsonbin.io" target="_blank" style="color:#1A56A0">jsonbin.io</a></li>
+        <li>Создайте новый Bin с содержимым: <code style="background:#F0F2F5;padding:2px 6px;border-radius:4px">{}</code></li>
+        <li>Скопируйте <b>BIN ID</b> и <b>X-Master-Key</b></li>
+        <li>Вставьте их ниже и нажмите Сохранить</li>
+      </ol>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+        <input id="cfgBinId" placeholder="BIN ID (напр. 665abc123...)" style="padding:9px 12px;border:1.5px solid #E2E6EC;border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+        <input id="cfgApiKey" placeholder="X-Master-Key ($2b$10$...)" style="padding:9px 12px;border:1.5px solid #E2E6EC;border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button id="cfgSave" style="flex:1;padding:10px;background:#1A56A0;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Сохранить и синхронизировать</button>
+        <button id="cfgClose" style="padding:10px 16px;background:#F0F2F5;border:none;border-radius:8px;font-size:14px;cursor:pointer">Отмена</button>
+      </div>
+      <div id="cfgStatus" style="margin-top:10px;font-size:12px;color:#4A5568"></div>
+    </div>
+  </div>
+</body>
+</html>
