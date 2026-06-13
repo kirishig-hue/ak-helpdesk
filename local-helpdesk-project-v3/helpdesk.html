@@ -161,122 +161,133 @@
 <script src="js/sla.js"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
-let curTab = 'tickets';
-let cartSearch = '', cartFilter = 'all';
+let curTab = 'tickets', fStatus = 'all', fSearch = '', sortC = 'ts', sortD = -1;
+let cartSrch = '', cartFil = 'all', devSearch = '', devTypeFil = 'all';
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 UI.modal.init();
 
-Storage.init().then(() => App.loadData()).then(() => {
+App.loadData().then(() => {
+  // Populate device type filter
+  const sel = document.getElementById('devTypeFilter');
+  Devices.TYPES.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id; opt.textContent = t.icon + ' ' + t.label;
+    sel.appendChild(opt);
+  });
   renderAll();
-  setInterval(() => curTab === 'cart' ? renderCart() : renderAll(), 30000);
+  setInterval(() => { if (curTab==='cart') renderCart(); else if (curTab==='devices') renderDevicesTab(); else renderAll(); }, 30000);
 });
 
-// ── Tabs ──────────────────────────────────────────────────────────────────────
+// ── Sync indicator ────────────────────────────────────────────────────────────
+function updateSyncBadge(state) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  if (!dot || !lbl) return;
+  if (!Storage.isConfigured()) { dot.className='sync-dot err'; lbl.textContent='Не настроено'; return; }
+  if (state==='syncing') { dot.className='sync-dot spin'; lbl.textContent='Синхронизация…'; }
+  else if (state==='error') { dot.className='sync-dot err'; lbl.textContent='Ошибка синхр.'; }
+  else { dot.className='sync-dot ok'; lbl.textContent='Синхр. '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}); }
+}
+updateSyncBadge(Storage.isConfigured() ? 'ok' : 'err');
+Storage.onSync(state => {
+  updateSyncBadge(state);
+  if (curTab==='cart') renderCart();
+  else if (curTab==='devices') renderDevicesTab();
+  else renderAll();
+});
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
 function switchTab(tab) {
   curTab = tab;
-  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-  document.getElementById(tab === 'tickets' ? 'paneTickets' : 'paneCart').classList.add('active');
-  document.getElementById('tabTicketsBtn').classList.toggle('active', tab === 'tickets');
-  document.getElementById('tabCartBtn').classList.toggle('active', tab === 'cart');
-  tab === 'cart' ? renderCart() : renderAll();
+  ['paneTickets','paneCart','paneDevices'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+  const paneMap = { tickets:'paneTickets', cart:'paneCart', devices:'paneDevices' };
+  const pane = document.getElementById(paneMap[tab]);
+  if (pane) pane.classList.add('active');
+
+  ['tabTicketsBtn','tabCartBtn','tabDevBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+  const btnMap = { tickets:'tabTicketsBtn', cart:'tabCartBtn', devices:'tabDevBtn' };
+  const btn = document.getElementById(btnMap[tab]);
+  if (btn) btn.classList.add('active');
+
+  if (tab==='cart') renderCart();
+  else if (tab==='devices') renderDevicesTab();
+  else renderAll();
 }
 
 document.getElementById('tabTicketsBtn').addEventListener('click', () => switchTab('tickets'));
 document.getElementById('tabCartBtn').addEventListener('click',    () => switchTab('cart'));
-document.getElementById('btnRefresh').addEventListener('click', () => curTab === 'cart' ? renderCart() : renderAll());
+document.getElementById('tabDevBtn').addEventListener('click',     () => switchTab('devices'));
+document.getElementById('btnRefresh').addEventListener('click', () => {
+  if (curTab==='cart') renderCart();
+  else if (curTab==='devices') renderDevicesTab();
+  else renderAll();
+});
 document.getElementById('btnCsv').addEventListener('click', Tickets.exportCsv);
 document.getElementById('btnCartCsv').addEventListener('click', Cartridges.exportStockCsv);
+document.getElementById('btnExportDevices').addEventListener('click', Devices.exportCsv);
 
 // ── Tickets tab ───────────────────────────────────────────────────────────────
 function renderAll() {
   const ts = Storage.tickets.all();
-  // Stats
-  const n = ts.filter(t => t.status === 'Новая').length;
-  const w = ts.filter(t => t.status === 'В работе').length;
-  const d = ts.filter(t => t.status === 'Решено').length;
+  const n = ts.filter(t=>t.status==='Новая').length;
+  const w = ts.filter(t=>t.status==='В работе').length;
+  const d = ts.filter(t=>t.status==='Решено').length;
   document.getElementById('statsRow').innerHTML =
-    UI.statCard(ts.length, 'Всего заявок') +
-    UI.statCard(n, 'Новые', '#1D4ED8') +
-    UI.statCard(w, 'В работе', 'var(--am)') +
-    UI.statCard(d, 'Решено', 'var(--gn)');
-
+    UI.statCard(ts.length,'Всего заявок') +
+    UI.statCard(n,'Новые','#1D4ED8') +
+    UI.statCard(w,'В работе','var(--am)') +
+    UI.statCard(d,'Решено','var(--gn)');
   Tickets.renderTable({
-    tbodyId: 'tbodyTickets', emptyId: 'emptyTickets', tableId: 'tblTickets',
+    tbodyId:'tbodyTickets', emptyId:'emptyTickets', tableId:'tblTickets',
     onRowClick: t => Tickets.openDetailModal(t, renderAll, renderAll),
   });
   Tickets.updateFilterCounts('filterBtns');
 }
 
-// Filter + search + sort
 UI.wireFilterGroup('filterBtns', s => { Tickets.setFilter(s); renderAll(); });
-document.getElementById('hdSearch').addEventListener('input', function () { Tickets.setSearch(this.value); renderAll(); });
-UI.wireSortHeaders('tblTickets', (c, d) => { Tickets.setSort(c, d); renderAll(); });
-
-// ── Sync status ──────────────────────────────────────────────────────────────
-function updateSyncBadge(state) {
-  const dot = document.getElementById('syncDot');
-  const lbl = document.getElementById('syncLabel');
-  if (!dot || !lbl) return;
-  if (!Storage.isConfigured()) {
-    dot.className = 'sync-dot err';
-    lbl.textContent = 'Не настроено';
-    return;
-  }
-  if (state === 'ok')   { dot.className = 'sync-dot ok';   lbl.textContent = 'Синхр. ' + new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}); }
-  if (state === 'spin') { dot.className = 'sync-dot spin';  lbl.textContent = 'Синхронизация…'; }
-  if (state === 'err')  { dot.className = 'sync-dot err';   lbl.textContent = 'Ошибка синхр.'; }
-}
-updateSyncBadge(Storage.isConfigured() ? 'ok' : 'err');
-Storage.onSync(() => { updateSyncBadge('ok'); curTab === 'cart' ? renderCart() : renderAll(); });
+document.getElementById('hdSearch').addEventListener('input', function() { Tickets.setSearch(this.value); renderAll(); });
+UI.wireSortHeaders('tblTickets', (c,d) => { Tickets.setSort(c,d); renderAll(); });
 
 // ── Cart tab ──────────────────────────────────────────────────────────────────
 function renderCart() {
   Cartridges.renderCartStats('cartStatsRow');
-  Cartridges.renderStockTable({ tbodyId: 'tbodyCart', searchQ: cartSearch, filter: cartFilter });
-  Cartridges.renderRepLog({ tbodyId: 'tbodyRep', tableId: 'tblRep', emptyId: 'emptyRep' });
+  Cartridges.renderStockTable({ tbodyId:'tbodyCart', searchQ:cartSrch, filter:cartFil });
+  Cartridges.renderRepLog({ tbodyId:'tbodyRep', tableId:'tblRep', emptyId:'emptyRep' });
 }
+document.getElementById('cartSearch').addEventListener('input', function() { cartSrch=this.value; Cartridges.renderStockTable({tbodyId:'tbodyCart',searchQ:cartSrch,filter:cartFil}); });
+document.getElementById('cartFilter').addEventListener('change', function() { cartFil=this.value; Cartridges.renderStockTable({tbodyId:'tbodyCart',searchQ:cartSrch,filter:cartFil}); });
 
-// ── Devices tab ──────────────────────────────────────────────────────────────
-let devSearch = '', devTypeFilter = 'all';
-
+// ── Devices tab ───────────────────────────────────────────────────────────────
 function renderDevicesTab() {
   const all = Storage.devices.all();
-  // Stats
   const byType = {};
-  all.forEach(d => { byType[d.type] = (byType[d.type] || 0) + 1; });
-  const topTypes = Object.entries(byType).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  all.forEach(d => { byType[d.type]=(byType[d.type]||0)+1; });
+  const topTypes = Object.entries(byType).sort((a,b)=>b[1]-a[1]).slice(0,3);
   document.getElementById('devStats').innerHTML =
-    UI.statCard(all.length, 'Всего устройств') +
-    topTypes.map(([type, cnt]) => {
-      const t = Devices.TYPES.find(x => x.id === type) || { icon:'🔧', label: type };
+    UI.statCard(all.length,'Всего устройств') +
+    topTypes.map(([type,cnt]) => {
+      const t = Devices.TYPES.find(x=>x.id===type)||{icon:'🔧',label:type};
       return UI.statCard(cnt, t.label);
     }).join('');
 
-  // Populate type filter
-  const sel = document.getElementById('devTypeFilter');
-  const currentVal = sel.value;
-  sel.innerHTML = '<option value="all">Все типы</option>' +
-    Devices.TYPES.map(t => `<option value="${t.id}">${t.icon} ${t.label}</option>`).join('');
-  sel.value = currentVal;
-
-  // Filter
   const q = devSearch.toLowerCase();
   const rows = all.filter(d => {
-    if (devTypeFilter !== 'all' && d.type !== devTypeFilter) return false;
-    if (q) return (d.owner||'').toLowerCase().includes(q) ||
-                  (d.brand||'').toLowerCase().includes(q) ||
-                  (d.model||'').toLowerCase().includes(q) ||
-                  (d.serial||'').toLowerCase().includes(q) ||
-                  (d.inv||'').toLowerCase().includes(q) ||
-                  (d.location||'').toLowerCase().includes(q);
+    if (devTypeFil!=='all' && d.type!==devTypeFil) return false;
+    if (q) return ['owner','brand','model','serial','inv','location'].some(k=>(d[k]||'').toLowerCase().includes(q));
     return true;
   });
 
   document.getElementById('emptyDevices').style.display = rows.length ? 'none' : 'block';
   document.getElementById('tblDevices').style.display   = rows.length ? 'table' : 'none';
   document.getElementById('tbodyDevices').innerHTML = rows.map(d => {
-    const t = Devices.TYPES.find(x => x.id === d.type) || { icon:'🔧', label: d.type };
+    const t = Devices.TYPES.find(x=>x.id===d.type)||{icon:'🔧',label:d.type||'Другое'};
     return `<tr>
       <td><span style="font-size:16px">${t.icon}</span> <span style="font-size:12px;color:var(--t2)">${UI.esc(t.label)}</span></td>
       <td><div class="td-name">${UI.esc(d.brand||'')} ${UI.esc(d.model||'')}</div></td>
@@ -284,49 +295,13 @@ function renderDevicesTab() {
       <td class="mono" style="font-size:12px;color:var(--t2)">${UI.esc(d.inv||'—')}</td>
       <td style="font-size:13px;font-weight:600">${UI.esc(d.owner||'—')}</td>
       <td style="font-size:12px;color:var(--t2)">${UI.esc(d.location||'—')}</td>
-      <td style="font-size:12px;color:var(--t2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${UI.esc(d.note||'—')}</td>
+      <td style="font-size:12px;color:var(--t2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${UI.esc(d.note||'')}">${UI.esc(d.note||'—')}</td>
       <td style="font-size:11px;color:var(--t3);white-space:nowrap">${UI.esc(d.added||'')}</td>
     </tr>`;
   }).join('');
 }
-
-document.getElementById('tabDevBtn').addEventListener('click', () => {
-  curTab = 'devices';
-  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-  document.getElementById('paneDevices').classList.add('active');
-  document.getElementById('tabTicketsBtn').classList.remove('active');
-  document.getElementById('tabCartBtn').classList.remove('active');
-  document.getElementById('tabDevBtn').classList.add('active');
-  renderDevicesTab();
-});
-document.getElementById('devSearch').addEventListener('input', function() { devSearch = this.value; renderDevicesTab(); });
-document.getElementById('devTypeFilter').addEventListener('change', function() { devTypeFilter = this.value; renderDevicesTab(); });
-document.getElementById('btnExportDevices').addEventListener('click', Devices.exportCsv);
-
-// Patch switchTab to handle devices
-const _origSwitchTab = switchTab;
-function switchTab(tab) {
-  if (tab === 'devices') {
-    curTab = 'devices';
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-    document.getElementById('paneDevices').classList.add('active');
-    renderDevicesTab();
-    return;
-  }
-  document.getElementById('tabDevBtn').classList.remove('active');
-  _origSwitchTab(tab);
-}
-
-// Also refresh devices on sync
-Storage.onSync(state => {
-  updateSyncBadge(state);
-  if (curTab === 'cart') renderCart();
-  else if (curTab === 'devices') renderDevicesTab();
-  else renderAll();
-});
-
-document.getElementById('cartSearch').addEventListener('input', function () { cartSearch = this.value; Cartridges.renderStockTable({ tbodyId: 'tbodyCart', searchQ: cartSearch, filter: cartFilter }); });
-document.getElementById('cartFilter').addEventListener('change', function () { cartFilter = this.value; Cartridges.renderStockTable({ tbodyId: 'tbodyCart', searchQ: cartSearch, filter: cartFilter }); });
+document.getElementById('devSearch').addEventListener('input', function() { devSearch=this.value; renderDevicesTab(); });
+document.getElementById('devTypeFilter').addEventListener('change', function() { devTypeFil=this.value; renderDevicesTab(); });
 </script>
 
   <!-- Sync setup modal -->
