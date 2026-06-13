@@ -4,7 +4,7 @@
  */
 
 const CONFIG = {
-  BIN_ID:  '6a2d3b13da38895dfeb9bdf',
+  BIN_ID:  '6a2d3b13da38895dfeb9bdf1',
   API_KEY: '$2a$10$f63xB98VcO..SoUEwpXEzOVrg3H3hAUPG99SP7QMGq1y5uvcVTTmu',
   SYNC_INTERVAL: 30000,
 };
