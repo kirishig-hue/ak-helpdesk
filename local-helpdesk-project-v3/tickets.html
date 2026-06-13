@@ -198,43 +198,60 @@
 <script src="js/printers.js"></script>
 <script src="js/cartridges.js"></script>
 <script src="js/devices.js"></script>
-<script>
-// ── State ─────────────────────────────────────────────────────────────────────
+<script>// ── State ─────────────────────────────────────────────────────────────────────
 let selectedPerson = null;
 let selectedCat    = null;
 let selectedPrio   = 'Средний';
 let myTicketsFilter = 'all';
+
+// ── Search (mobile-friendly) ──────────────────────────────────────────────────
+function _doSearch() {
+  const inp = document.getElementById('empSearch');
+  const res = document.getElementById('searchResults');
+  if (!inp || !res) return;
+  const q = inp.value.trim();
+  if (!q || !App.state.employees.length) { res.style.display = 'none'; return; }
+  const hits = Employees.search(q, App.state.employees);
+  if (!hits.length) {
+    res.innerHTML = '<div style="padding:16px;text-align:center;color:var(--t3)">Не найдено</div>';
+    res.style.display = 'block';
+    return;
+  }
+  res.innerHTML = hits.map((e, i) => `
+    <div class="result-item" data-i="${i}">
+      <div class="avatar" style="width:38px;height:38px;font-size:13px;background:${UI.avatarColor(e.name)}">${UI.initials(e.name)}</div>
+      <div>
+        <div class="ri-name">${UI.esc(e.name)}</div>
+        <div class="ri-info">${UI.esc(e.dept || '—')}${e.login ? ' · ' + UI.esc(e.login) : ''}</div>
+      </div>
+    </div>`).join('');
+  res.style.display = 'block';
+  res.querySelectorAll('.result-item').forEach((el, i) => {
+    el.addEventListener('pointerdown', (ev) => { ev.preventDefault(); selectPerson(hits[i]); });
+  });
+}
+let _st = null;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 UI.modal.init();
 UI.sheet.init();
 
 Storage.init().then(() => App.loadData()).then(() => {
-    document.getElementById('syncWarn').style.display = Storage.isConfigured() ? 'none' : 'flex';
-  // Wire search
-  document.getElementById('empSearch').addEventListener('input', function () {
-    const q = this.value.trim();
-    const res = document.getElementById('searchResults');
-    if (q.length < 1) { res.style.display = 'none'; return; }
-    const hits = Employees.search(q, App.state.employees);
-    if (!hits.length) {
-      res.innerHTML = '<div style="padding:16px;text-align:center;color:var(--t3)">Не найдено</div>';
-    } else {
-      res.innerHTML = hits.map((e, i) => `
-        <div class="result-item" data-i="${i}">
-          <div class="avatar" style="width:38px;height:38px;font-size:13px;background:${UI.avatarColor(e.name)}">${UI.initials(e.name)}</div>
-          <div>
-            <div class="ri-name">${UI.esc(e.name)}</div>
-            <div class="ri-info">${UI.esc(e.dept || '—')}${e.login ? ' · ' + UI.esc(e.login) : ''}</div>
-          </div>
-        </div>`).join('');
-      res.querySelectorAll('.result-item').forEach((el, i) => {
-        el.addEventListener('click', () => selectPerson(hits[i]));
-      });
-    }
-    res.style.display = 'block';
-  });
+  document.getElementById('syncWarn').style.display = Storage.isConfigured() ? 'none' : 'flex';
+  // Wire search events for all input methods including mobile keyboards
+  const empEl = document.getElementById('empSearch');
+  if (empEl) {
+    ['input','keyup','change','compositionend'].forEach(ev => {
+      empEl.addEventListener(ev, () => { clearTimeout(_st); _st = setTimeout(_doSearch, 200); });
+    });
+    empEl.addEventListener('blur', () => setTimeout(() => {
+      const res = document.getElementById('searchResults');
+      if (res && res.innerHTML) res.style.display = 'block';
+    }, 250));
+  }
 });
+
+
 
 // ── Select person ─────────────────────────────────────────────────────────────
 function selectPerson(person) {
