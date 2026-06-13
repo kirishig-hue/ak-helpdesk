@@ -45,7 +45,7 @@ const Employees = (() => {
         ${infoItem('Логин',     emp.login,    true)}
         ${infoItem('Мобильный', emp.mobile)}
         ${infoItem('Доб. номер', emp.ext)}
-        ${infoItem('Рабочий тел.', emp.work_phone)}
+
         ${infoItem('E-Mail',    emp.email)}
       </div>`;
   }
