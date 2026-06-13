@@ -260,9 +260,9 @@
   },
   {
     "article": "CS-CF226X",
-    "qty": 0,
+    "qty": 3,
     "stock_per_printer": {
-      "4": 0
+      "4": 3
     },
     "printers": [
       4

@@ -34,7 +34,7 @@ const App = (() => {
     await Storage.init();
 
     // Seed cartridge stock by article (one shared counter per cartridge model)
-    const stockSeedByArticle = {"HP 207X / CS-W222xX":0,"HP 81X / CS-CF281X":12,"HP 26X / CS-CF283X-MPSXL":7,"HP 30X / CS-CF230X":0,"HP 55X / CS-CE255XS":1,"Canon 054H / CS-C054H":1,"Canon FX-10 / CS-FX10-MPS":9,"Canon EP-703 / CS-EP703":0,"HP 83X / CS-CF283X-MPSXL":7,"Canon 737 / CS-CF283X":7,"TK-1270 / N-TK-1270":1,"TK-1150 / CS-TK1150-MPS":4,"TK-3430 / CS-TK3430":12,"Epson 103 / CS-EPT03V":1,"Epson 101 / CS-EPT03V14A":1,"TNP-75/76 / CET TNP75/76 + Драм IUP-34":3,"Термолента / термоэтикетка":0,"Риббон + термоэтикетка":0,"Термолента / риббон + термоэтикетка":0};
+    const stockSeedByArticle = {"HP 207X / CS-W222xX":0,"HP 81X / CS-CF281X":12,"HP 26X / CS-CF283X-MPSXL":7,"HP 30X / CS-CF230X":0,"HP 55X / CS-CE255XS":1,"Canon 054H / CS-C054H":1,"Canon FX-10 / CS-FX10-MPS":9,"Canon EP-703 / CS-EP703":0,"HP 83X / CS-CF283X-MPSXL":7,"Canon 737 / CS-CF283X":7,"TK-1270 / N-TK-1270":1,"TK-1150 / CS-TK1150-MPS":4,"TK-3430 / CS-TK3430":12,"Epson 103 / CS-EPT03V":1,"Epson 101 / CS-EPT03V14A":1,"TNP-75/76 / CET TNP75/76 + Драм IUP-34":3,"Термолента / термоэтикетка":0,"Риббон + термоэтикетка":0,"Термолента / риббон + термоэтикетка":0,"CS-CF226X":3};
     Storage.cart.seedOnce(stockSeedByArticle);
 
     return state;
