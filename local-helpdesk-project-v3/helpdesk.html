@@ -85,15 +85,18 @@
   <div class="toolbar cart-toolbar">
     <div class="search-wrap">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M15 15l-3.5-3.5"/></svg>
-      <input class="search-input" id="cartSearch" placeholder="Поиск принтера…" autocomplete="off">
+      <input class="search-input" id="cartSearch" placeholder="Поиск принтера / картриджа…" autocomplete="off">
     </div>
+    <select class="search-input" id="cartBrandFilter" style="padding-left:10px">
+      <option value="all">Все бренды</option>
+    </select>
     <select class="search-input" id="cartFilter" style="padding-left:10px">
       <option value="all">Все принтеры</option>
       <option value="low">⚠ Остаток ≤ 2</option>
       <option value="zero">🔴 Нет на складе</option>
       <option value="unk">❓ Не учтено</option>
     </select>
-    <button class="btn btn-secondary" id="btnCartCsv">↓ CSV склад</button>
+    <button class="btn btn-secondary" id="btnCartCsv">↓ CSV</button>
   </div>
   <div class="table-wrap">
     <table class="table" id="tblCart">
@@ -107,7 +110,11 @@
     </table>
   </div>
   <div class="p-4">
-    <div style="font-size:15px;font-weight:700;margin-bottom:12px">Журнал замен</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:15px;font-weight:700">Журнал замен</div>
+      <button id="btnToggleRep" class="btn btn-secondary btn-sm">👁 Показать</button>
+    </div>
+    <div id="repSection" style="display:none">
     <table class="table" id="tblRep" style="display:none">
       <thead><tr>
         <th>Дата</th><th>Сотрудник</th><th>Принтер</th><th>Картридж</th>
@@ -118,7 +125,7 @@
     <div class="empty-state" id="emptyRep">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
       <p>Замен ещё не было</p>
-    </div>
+    </div><!-- /repSection -->
   </div>
 </div>
 
@@ -170,7 +177,7 @@
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let curTab = 'tickets', fStatus = 'all', fSearch = '', sortC = 'ts', sortD = -1;
-let cartSrch = '', cartFil = 'all', devSearch = '', devTypeFil = 'all';
+let cartSrch = '', cartFil = 'all', cartBrand = 'all', devSearch = '', devTypeFil = 'all';
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 UI.modal.init();
@@ -183,6 +190,17 @@ App.loadData().then(() => { Storage.init();
     opt.value = t.id; opt.textContent = t.icon + ' ' + t.label;
     sel.appendChild(opt);
   });
+  // Populate cart brand filter
+  (function() {
+    const sel = document.getElementById('cartBrandFilter');
+    if (!sel) return;
+    const brands = [...new Set(App.state.printers.map(p => p.brand).filter(Boolean))].sort();
+    brands.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b; opt.textContent = b;
+      sel.appendChild(opt);
+    });
+  })();
   renderAll();
   setInterval(() => { if (curTab==='cart') renderCart(); else if (curTab==='devices') renderDevicesTab(); else renderAll(); }, 30000);
 });
@@ -266,11 +284,24 @@ UI.wireSortHeaders('tblTickets', (c,d) => { Tickets.setSort(c,d); renderAll(); }
 // ── Cart tab ──────────────────────────────────────────────────────────────────
 function renderCart() {
   Cartridges.renderCartStats('cartStatsRow');
-  Cartridges.renderStockTable({ tbodyId:'tbodyCart', searchQ:cartSrch, filter:cartFil });
+  Cartridges.renderStockTable({ tbodyId:'tbodyCart', searchQ:cartSrch, filter:cartFil, brand:cartBrand });
   Cartridges.renderRepLog({ tbodyId:'tbodyRep', tableId:'tblRep', emptyId:'emptyRep' });
 }
-document.getElementById('cartSearch').addEventListener('input', function() { cartSrch=this.value; Cartridges.renderStockTable({tbodyId:'tbodyCart',searchQ:cartSrch,filter:cartFil}); });
-document.getElementById('cartFilter').addEventListener('change', function() { cartFil=this.value; Cartridges.renderStockTable({tbodyId:'tbodyCart',searchQ:cartSrch,filter:cartFil}); });
+// Toggle journal visibility
+(function(){
+  const btn = document.getElementById('btnToggleRep');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const sec = document.getElementById('repSection');
+    const visible = sec.style.display !== 'none';
+    sec.style.display = visible ? 'none' : 'block';
+    btn.textContent = visible ? '👁 Показать' : '🙈 Скрыть';
+  });
+})();
+
+document.getElementById('cartSearch').addEventListener('input', function() { cartSrch=this.value; Cartridges.renderStockTable({tbodyId:'tbodyCart',searchQ:cartSrch,filter:cartFil,brand:cartBrand}); });
+document.getElementById('cartFilter').addEventListener('change', function() { cartFil=this.value; Cartridges.renderStockTable({tbodyId:'tbodyCart',searchQ:cartSrch,filter:cartFil,brand:cartBrand}); });
+document.getElementById('cartBrandFilter').addEventListener('change', function() { cartBrand=this.value; Cartridges.renderStockTable({tbodyId:'tbodyCart',searchQ:cartSrch,filter:cartFil,brand:cartBrand}); });
 
 // ── Devices tab ───────────────────────────────────────────────────────────────
 function renderDevicesTab() {

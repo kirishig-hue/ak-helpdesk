@@ -211,7 +211,7 @@ select.search-input{padding-left:10px;cursor:pointer}
 .modal-label{font-size:11px;color:var(--t3);width:100px;flex-shrink:0;padding-top:1px}
 .modal-val{font-size:12px;color:var(--tx);flex:1;word-break:break-word}
 .modal-val a{color:var(--accent);text-decoration:none}
-.modal-desc{background:var(--bg);border-radius:8px;padding:10px;font-size:12px;color:var(--t2);line-height:1.5;margin-top:4px}
+.modal-desc{background:var(--bg);border-radius:8px;padding:12px 14px;font-size:14px;color:var(--tx);line-height:1.7;margin-top:6px;min-height:60px;white-space:pre-wrap;word-break:break-word}
 .modal-foot{padding:10px 16px;border-top:1px solid var(--bd);display:flex;gap:6px;flex-wrap:wrap;padding-bottom:calc(10px + var(--safe-bottom))}
 
 /* ── Status buttons (in modal) ───────────────────────────────────────────────── */

@@ -140,7 +140,7 @@ const Cartridges = (() => {
 
   // ── Stock table (helpdesk / inventory) ────────────────────────────────────────
   // Группировка по артикулу — одна строка на уникальный картридж
-  function renderStockTable({ tbodyId, searchQ = '', filter = 'all' }) {
+  function renderStockTable({ tbodyId, searchQ = '', filter = 'all', brand = 'all' }) {
     const q = (searchQ || '').toLowerCase();
 
     // Build unique articles from printers
@@ -159,9 +159,16 @@ const Cartridges = (() => {
       if (filter === 'low'  && !(cnt !== null && cnt > 0 && cnt <= 2)) return false;
       if (filter === 'zero' && cnt !== 0)   return false;
       if (filter === 'unk'  && cnt !== null) return false;
+      if (brand !== 'all' && !row.printers.some(p => p.brand === brand)) return false;
       if (q) {
         return row.article.toLowerCase().includes(q) ||
-          row.printers.some(p => (p.model||'').toLowerCase().includes(q) || (p.location||'').toLowerCase().includes(q) || (p.owner||'').toLowerCase().includes(q));
+          row.printers.some(p =>
+            (p.model||'').toLowerCase().includes(q) ||
+            (p.brand||'').toLowerCase().includes(q) ||
+            (p.location||'').toLowerCase().includes(q) ||
+            (p.owner||'').toLowerCase().includes(q) ||
+            row.article.toLowerCase().includes(q)
+          );
       }
       return true;
     });
