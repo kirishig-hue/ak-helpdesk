@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Инвентарь — АК-Сервис</title>
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo"><div class="logo-icon">АК</div><span class="logo-text">АК-Сервис</span></div>
+  <div class="hdr-sep"></div>
+  <span class="hdr-title">Инвентарь принтеров</span>
+  <div class="hdr-nav" style="margin-left:auto">
+    <a href="index.html">🏠</a>
+    <a href="tickets.html">📱 Заявка</a>
+    <a href="helpdesk.html">🖥 Helpdesk</a>
+  </div>
+  <div style="display:flex;gap:6px;margin-left:8px">
+    <button class="btn btn-ghost" id="btnExportPrinters">↓ CSV принтеры</button>
+    <button class="btn btn-ghost" id="btnExportMileage">↓ CSV пробег</button>
+  </div>
+</div>
+
+  <!-- Sync status banner -->
+  <div id="syncBanner" style="display:none;background:#FEF3C7;border-bottom:1px solid #FCD34D;padding:6px 16px;font-size:12px;color:#92400E;display:flex;align-items:center;gap:8px">
+    <span>⚠️</span>
+    <span id="syncMsg">Синхронизация не настроена. Данные хранятся локально — другие пользователи не увидят изменения.</span>
+    <a href="#" id="syncHelp" style="color:#92400E;font-weight:600;margin-left:auto;white-space:nowrap">Как настроить?</a>
+  </div>
+
+<div class="stats-row" id="invStats"></div>
+
+<div class="toolbar">
+  <div class="search-wrap" style="flex:1;max-width:320px">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M15 15l-3.5-3.5"/></svg>
+    <input class="search-input" id="invSearch" placeholder="Поиск принтера…" autocomplete="off">
+  </div>
+  <select class="search-input" id="invBrand" style="max-width:160px;padding-left:10px">
+    <option value="all">Все бренды</option>
+  </select>
+  <select class="search-input" id="invFilter" style="max-width:180px;padding-left:10px">
+    <option value="all">Все принтеры</option>
+    <option value="low">⚠ Картриджей ≤ 2</option>
+    <option value="zero">🔴 Нет картриджа</option>
+    <option value="unk">❓ Не учтено</option>
+  </select>
+</div>
+
+<div class="table-wrap">
+  <table class="table" id="tblInv">
+    <thead><tr>
+      <th data-c="cartridge">Картридж / артикул</th>
+      <th data-c="brand">Принтеры</th>
+      <th data-c="owner">Владельцы</th>
+      <th data-c="qty" style="text-align:center">На складе</th>
+      <th data-c="today" style="text-align:center">Сегодня замен</th>
+      <th data-c="total" style="text-align:center">Всего замен</th>
+    </tr></thead>
+    <tbody id="tbodyInv"></tbody>
+  </table>
+  <div class="empty-state" id="emptyInv" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+    <p>Ничего не найдено</p>
+  </div>
+</div>
+
+<script src="js/storage.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+<script src="js/cartridges.js"></script>
+<script src="js/mileage.js"></script>
+<script>
+let invSearch = '', invBrand = 'all', invFilter = 'all';
+let sortC = 'id', sortD = 1;
+
+Storage.init().then(() => App.loadData()).then(() => {
+  // Populate brand filter
+  const brands = [...new Set(App.state.printers.map(p => p.brand).filter(Boolean))].sort();
+  const sel = document.getElementById('invBrand');
+  brands.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b; opt.textContent = b;
+    sel.appendChild(opt);
+  });
+  renderStats();
+  renderTable();
+});
+
+function renderStats() {
+  const ps = App.state.printers;
+  const zeroCnt = ps.filter(p => Storage.cart.get(p.id) === 0).length;
+  const lowCnt  = ps.filter(p => { const c = Storage.cart.get(p.id); return c !== null && c > 0 && c <= 2; }).length;
+  const reps    = Storage.replacements.all();
+  const today   = new Date().toLocaleDateString('ru-RU');
+  const todayN  = reps.filter(r => (r.created || '').startsWith(today)).reduce((s,r) => s+(r.qty||1), 0);
+  document.getElementById('invStats').innerHTML =
+    UI.statCard(ps.length, 'Принтеров') +
+    UI.statCard(zeroCnt, 'Нет картриджа', 'var(--rd)') +
+    UI.statCard(lowCnt, 'Критично ≤2', 'var(--am)') +
+    UI.statCard(todayN, 'Замен сегодня', 'var(--gn)');
+}
+
+function getRows() {
+  const q = invSearch.toLowerCase();
+  return App.state.printers.filter(pr => {
+    const cnt = Storage.cart.getByArticle(pr.cartridge);
+    if (invBrand !== 'all' && pr.brand !== invBrand) return false;
+    if (invFilter === 'low'  && !(cnt !== null && cnt > 0 && cnt <= 2)) return false;
+    if (invFilter === 'zero' && cnt !== 0)   return false;
+    if (invFilter === 'unk'  && cnt !== null) return false;
+    if (q) return ['brand','model','location','owner','cartridge'].some(k => (pr[k]||'').toLowerCase().includes(q));
+    return true;
+  }).sort((a, b) => {
+    let av, bv;
+    if (sortC === 'id')    { av = a.id;      bv = b.id; }
+    else if (sortC === 'qty')   { av = Storage.cart.get(a.id) ?? -1; bv = Storage.cart.get(b.id) ?? -1; }
+    else if (sortC === 'total') { av = Storage.replacements.total(a.id); bv = Storage.replacements.total(b.id); }
+    else { av = (a[sortC]||'').toLowerCase(); bv = (b[sortC]||'').toLowerCase(); }
+    return av < bv ? -sortD : av > bv ? sortD : 0;
+  });
+}
+
+function renderTable() {
+  // Group printers by cartridge article
+  const q = invSearch.toLowerCase();
+  const articleMap = {};
+  App.state.printers.forEach(pr => {
+    const art = (pr.cartridge || '').trim();
+    if (!art || art === '—') return;
+    if (invBrand !== 'all' && pr.brand !== invBrand) return;
+    if (!articleMap[art]) {
+      articleMap[art] = { article: art, printers: [], cnt: Storage.cart.getByArticle(art) };
+    }
+    articleMap[art].printers.push(pr);
+  });
+  let rows = Object.values(articleMap).filter(row => {
+    const cnt = row.cnt;
+    if (invFilter === 'low'  && !(cnt !== null && cnt > 0 && cnt <= 2)) return false;
+    if (invFilter === 'zero' && cnt !== 0)   return false;
+    if (invFilter === 'unk'  && cnt !== null) return false;
+    if (q) return row.article.toLowerCase().includes(q) ||
+      row.printers.some(p => (p.brand+''+p.model).toLowerCase().includes(q) || (p.owner||'').toLowerCase().includes(q));
+    return true;
+  }).sort((a, b) => {
+    let av, bv;
+    if (sortC === 'qty') { av = a.cnt ?? -1; bv = b.cnt ?? -1; }
+    else if (sortC === 'total') { av = Storage.replacements.totalByArticle(a.article); bv = Storage.replacements.totalByArticle(b.article); }
+    else if (sortC === 'today') { av = Storage.replacements.todayByArticle(a.article); bv = Storage.replacements.todayByArticle(b.article); }
+    else { av = a.article.toLowerCase(); bv = b.article.toLowerCase(); }
+    return av < bv ? -sortD : av > bv ? sortD : 0;
+  });
+
+  document.getElementById('emptyInv').style.display = rows.length ? 'none' : 'block';
+  document.getElementById('tblInv').style.display   = rows.length ? 'table' : 'none';
+  document.getElementById('tbodyInv').innerHTML = rows.map(row => {
+    const cnt    = row.cnt;
+    const tod    = Storage.replacements.todayByArticle(row.article);
+    const tot    = Storage.replacements.totalByArticle(row.article);
+    const names  = [...new Set(row.printers.map(p => p.brand + ' ' + p.model))].join(', ');
+    const owners = [...new Set(row.printers.map(p => p.owner).filter(Boolean))].join(', ');
+    const safeId = row.article.replace(/[^a-zA-Z0-9]/g, '_');
+    return `<tr>
+      <td style="font-size:12px;font-weight:600;color:var(--accent)">${UI.esc(row.article)}</td>
+      <td style="font-size:12px;color:var(--t2)">${UI.esc(names)}<div class="td-sub">${row.printers.length} принт.</div></td>
+      <td style="font-size:12px;color:var(--t2)">${UI.esc(owners||'—')}</td>
+      <td style="text-align:center">
+        <div style="display:flex;align-items:center;justify-content:center;gap:4px">
+          <button class="adj-btn" data-art="${UI.esc(row.article)}" data-d="-1">−</button>
+          <span id="icc_${safeId}">${UI.stockHTML(cnt)}</span>
+          <button class="adj-btn" data-art="${UI.esc(row.article)}" data-d="1">+</button>
+        </div>
+      </td>
+      <td style="text-align:center;font-weight:600;color:${tod?'var(--accent)':'var(--t3)'}">${tod||'—'}</td>
+      <td style="text-align:center;color:var(--t2)">${tot||'—'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tbodyInv').querySelectorAll('.adj-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const art = btn.dataset.art;
+      Storage.cart.adjustByArticle(art, +btn.dataset.d);
+      const safeId = art.replace(/[^a-zA-Z0-9]/g, '_');
+      const el = document.getElementById('icc_' + safeId);
+      if (el) el.innerHTML = UI.stockHTML(Storage.cart.getByArticle(art));
+    });
+  });
+}
+
+// ── Sort ──────────────────────────────────────────────────────────────────────
+UI.wireSortHeaders('tblInv', (c, d) => { sortC = c; sortD = d; renderTable(); });
+
+// ── Filters ───────────────────────────────────────────────────────────────────
+document.getElementById('invSearch').addEventListener('input', function () { invSearch = this.value; renderTable(); });
+document.getElementById('invBrand').addEventListener('change', function ()  { invBrand = this.value;  renderTable(); });
+document.getElementById('invFilter').addEventListener('change', function () { invFilter = this.value; renderTable(); });
+
+// ── CSV exports ───────────────────────────────────────────────────────────────
+document.getElementById('btnExportPrinters').addEventListener('click', () => {
+  const headers = ['#','Бренд','Модель','Тип','Серийный','Расположение','Кабинет','Владелец','Картридж','На складе','Статус'];
+  const rows = App.state.printers.map(pr => {
+    const cnt = Storage.cart.getByArticle(pr.cartridge);
+    // Normalize owner: replace newlines/semicolons with comma+space for clean CSV
+    const owner = (pr.owner || '').replace(/[\n;]+/g, ', ').trim();
+    return [pr.id, pr.brand, pr.model, pr.type, pr.serial, pr.location, pr.cabinet, owner, pr.cartridge, cnt === null ? 'н/д' : cnt, pr.status];
+  });
+  UI.downloadCsv(rows, headers, 'printers_' + new Date().toISOString().slice(0,10) + '.csv');
+});
+
+document.getElementById('btnExportMileage').addEventListener('click', Mileage.exportCsv);
+</script>
+
+  <!-- Sync setup modal -->
+  <div id="syncSetupOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#fff;border-radius:14px;max-width:480px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:8px">Настройка общего склада</h2>
+      <p style="font-size:13px;color:#4A5568;line-height:1.6;margin-bottom:16px">
+        Для синхронизации остатков картриджей между всеми пользователями используется <b>JSONBin.io</b> — бесплатный облачный JSON-хостинг.
+      </p>
+      <ol style="font-size:13px;color:#4A5568;line-height:2;padding-left:18px;margin-bottom:16px">
+        <li>Зарегистрируйтесь на <a href="https://jsonbin.io" target="_blank" style="color:#1A56A0">jsonbin.io</a></li>
+        <li>Создайте новый Bin с содержимым: <code style="background:#F0F2F5;padding:2px 6px;border-radius:4px">{}</code></li>
+        <li>Скопируйте <b>BIN ID</b> и <b>X-Master-Key</b></li>
+        <li>Вставьте их ниже и нажмите Сохранить</li>
+      </ol>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+        <input id="cfgBinId" placeholder="BIN ID (напр. 665abc123...)" style="padding:9px 12px;border:1.5px solid #E2E6EC;border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+        <input id="cfgApiKey" placeholder="X-Master-Key ($2b$10$...)" style="padding:9px 12px;border:1.5px solid #E2E6EC;border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button id="cfgSave" style="flex:1;padding:10px;background:#1A56A0;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Сохранить и синхронизировать</button>
+        <button id="cfgClose" style="padding:10px 16px;background:#F0F2F5;border:none;border-radius:8px;font-size:14px;cursor:pointer">Отмена</button>
+      </div>
+      <div id="cfgStatus" style="margin-top:10px;font-size:12px;color:#4A5568"></div>
+    </div>
+  </div>
+</body>
+</html>
