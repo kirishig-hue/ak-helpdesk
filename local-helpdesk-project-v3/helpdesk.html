@@ -24,8 +24,10 @@
   <div style="display:flex;gap:6px;margin-left:8px;flex-wrap:wrap">
     <button class="btn btn-ghost active" id="tabTicketsBtn">📋 Заявки</button>
     <button class="btn btn-ghost" id="tabCartBtn">🖨 Картриджи</button>
-    <span class="sync-badge" id="syncBadge"><span class="sync-dot" id="syncDot"></span><span id="syncLabel">Нет синхр.</span></span><button class="btn btn-ghost" id="btnRefresh">⟳</button>
-    <button class="btn btn-ghost" id="btnCsv">↓ CSV</button>
+    <button class="btn btn-ghost" id="tabDevBtn">📦 Инвентарь техники</button>
+    <span class="sync-badge" id="syncBadge"><span class="sync-dot" id="syncDot"></span><span id="syncLabel">Нет синхр.</span></span>
+    <button class="btn btn-ghost" id="btnRefresh">⟳</button>
+    <button class="btn btn-ghost" id="btnCsv">↓ CSV заявки</button>
   </div>
 </div>
 
@@ -230,9 +232,9 @@ document.getElementById('btnRefresh').addEventListener('click', () => {
   else if (curTab==='devices') renderDevicesTab();
   else renderAll();
 });
-document.getElementById('btnCsv').addEventListener('click', Tickets.exportCsv);
-document.getElementById('btnCartCsv').addEventListener('click', Cartridges.exportStockCsv);
-document.getElementById('btnExportDevices').addEventListener('click', Devices.exportCsv);
+(function(){var _el=document.getElementById('btnCsv');if(_el)_el.addEventListener('click',Tickets.exportCsv);})();
+(function(){var _el=document.getElementById('btnCartCsv');if(_el)_el.addEventListener('click',Cartridges.exportStockCsv);})();
+(function(){var _el=document.getElementById('btnExportDevices');if(_el)_el.addEventListener('click',Devices.exportCsv);})();
 
 // ── Tickets tab ───────────────────────────────────────────────────────────────
 function renderAll() {
