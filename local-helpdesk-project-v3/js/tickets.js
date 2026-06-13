@@ -194,9 +194,10 @@ const Tickets = (() => {
 
   // ── CSV export ────────────────────────────────────────────────────────────────
   function exportCsv() {
-    const cols = ['id','created','name','dept','position','mobile','ext','computer','login','category','device','priority','description','status'];
-    const rows = filtered(Storage.tickets.all()).map(t => cols.map(c => t[c] ?? ''));
-    UI.downloadCsv(rows, cols, 'helpdesk_' + new Date().toISOString().slice(0,10) + '.csv');
+    const fields  = ['id','created','name','dept','position','mobile','ext','computer','login','category','device','priority','description','status'];
+    const headers = ['Номер','Дата','Сотрудник','Отдел','Должность','Мобильный','Добавочный','Компьютер','Логин','Категория','Устройство','Приоритет','Описание','Статус'];
+    const rows = filtered(Storage.tickets.all()).map(t => fields.map(f => t[f] ?? ''));
+    UI.downloadCsv(rows, headers, 'helpdesk_' + new Date().toISOString().slice(0,10) + '.csv');
   }
 
   // ── Public setters ────────────────────────────────────────────────────────────

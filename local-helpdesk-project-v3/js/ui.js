@@ -124,13 +124,20 @@ const UI = (() => {
 
   // ── Download helper ───────────────────────────────────────────────────────────
   function download(content, type, filename) {
-    const blob = new Blob([content], { type });
-    const url  = URL.createObjectURL(blob);
-    const a    = Object.assign(document.createElement('a'), { href: url, download: filename });
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      const blob = new Blob([content], { type });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 300);
+    } catch(e) {
+      console.error('Download failed:', e);
+      UI.toast('Ошибка скачивания: ' + e.message, 'error');
+    }
   }
 
   function downloadCsv(rows, headers, filename) {
