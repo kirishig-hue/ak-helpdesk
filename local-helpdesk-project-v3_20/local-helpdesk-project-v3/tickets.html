@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>IT-заявка — АК-Сервис</title>
+<link rel="stylesheet" href="css/main.css">
+<style>
+/* ── Mobile page styles ──────────────────────────────────────────────────────── */
+.page{display:none;padding:14px 16px;max-width:540px;margin:0 auto}
+.page.active{display:block}
+
+/* Search */
+.search-box{width:100%;padding:13px 12px 13px 38px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:15px;color:var(--tx);background:var(--sf);outline:none;-webkit-appearance:none;font-family:var(--font)}
+.search-box:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,86,160,.1)}
+.search-box::placeholder{color:var(--t3)}
+.search-results{background:var(--sf);border:1.5px solid var(--bd);border-radius:var(--r);overflow:hidden;max-height:320px;overflow-y:auto}
+.result-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--bd);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .1s}
+.result-item:last-child{border-bottom:none}
+.result-item:active{background:var(--bg)}
+.ri-name{font-weight:600;font-size:14px}
+.ri-info{font-size:12px;color:var(--t3);margin-top:1px}
+
+/* Profile */
+.profile-head{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.profile-name{font-size:18px;font-weight:700;line-height:1.3}
+.profile-position{font-size:13px;color:var(--accent);font-weight:500;margin-top:2px}
+.profile-dept{font-size:12px;color:var(--t3);margin-top:1px}
+.profile-divider{height:1px;background:var(--bd);margin:12px 0}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.info-item{background:var(--bg);border-radius:9px;padding:10px 12px}
+.info-label{font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.info-val{font-size:13px;font-weight:600;color:var(--tx)}
+.info-val.empty{color:var(--t3);font-weight:400;font-style:italic}
+
+/* Category grid */
+.cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.cat-btn{background:var(--sf);border:1.5px solid var(--bd);border-radius:var(--r);padding:14px 10px;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all .15s}
+.cat-btn.active{border-color:var(--accent);background:var(--al);box-shadow:0 0 0 3px rgba(26,86,160,.1)}
+.cat-icon{font-size:28px;margin-bottom:6px}
+.cat-label{font-size:13px;font-weight:600;color:var(--tx);line-height:1.3}
+
+/* Priority */
+.prio-row{display:flex;gap:8px;margin-bottom:14px}
+.prio-btn{flex:1;padding:10px 4px;border:1.5px solid var(--bd);border-radius:9px;text-align:center;font-size:13px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:var(--font);background:var(--sf);transition:all .15s}
+.prio-btn.p-low.active{border-color:var(--gn);background:var(--gnb);color:#166534}
+.prio-btn.p-mid.active{border-color:var(--am);background:var(--amb);color:#92400E}
+.prio-btn.p-high.active{border-color:var(--rd);background:var(--rdb);color:#991B1B}
+
+/* Textarea */
+.desc-box{width:100%;min-height:110px;padding:12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;font-family:var(--font);color:var(--tx);resize:vertical;outline:none;-webkit-appearance:none}
+.desc-box:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,86,160,.1)}
+.char-count{text-align:right;font-size:12px;color:var(--t3);margin:4px 0 14px}
+
+/* Tickets list */
+.ticket-card{background:var(--sf);border:1.5px solid var(--bd);border-radius:var(--r);padding:13px 14px;margin-bottom:8px}
+.my-tickets-title{font-size:16px;font-weight:700;margin-bottom:10px}
+
+/* Buttons */
+.submit-btn{width:100%;padding:15px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-size:16px;font-weight:700;cursor:pointer;font-family:var(--font);margin-bottom:10px;-webkit-tap-highlight-color:transparent}
+.submit-btn:active{background:#154a8a}
+.back-btn{width:100%;padding:12px;background:none;color:var(--t2);border:1.5px solid var(--bd);border-radius:var(--r);font-size:15px;cursor:pointer;font-family:var(--font);-webkit-tap-highlight-color:transparent;margin-bottom:8px}
+.error-msg{font-size:13px;color:var(--rd);margin-bottom:10px;padding:8px 12px;background:var(--rdb);border-radius:8px;display:none}
+
+/* Sheet */
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--sf);border-radius:16px 16px 0 0;width:100%;max-width:540px;max-height:88vh;overflow-y:auto;padding:20px 16px 32px}
+.handle{width:36px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 16px}
+
+.section-title{font-size:16px;font-weight:700;margin-bottom:10px}
+.field-error{display:none}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo"><div class="logo-icon">АК</div><span class="logo-text">АК-Сервис</span></div>
+  <div class="hdr-sep"></div>
+  <span class="hdr-title">IT-поддержка</span>
+</div>
+<div class="sync-warning" id="syncWarn" style="display:none">
+  ⚠️ <div><b>Режим без синхронизации.</b> Данные сохраняются только в этом браузере. Настройте JSONBin в <code>js/storage.js</code> для общего склада.</div>
+</div>
+
+  <!-- Sync status banner -->
+  <div id="syncBanner" style="display:none;background:#FEF3C7;border-bottom:1px solid #FCD34D;padding:6px 16px;font-size:12px;color:#92400E;display:flex;align-items:center;gap:8px">
+    <span>⚠️</span>
+    <span id="syncMsg">Синхронизация не настроена. Данные хранятся локально — другие пользователи не увидят изменения.</span>
+    <a href="#" id="syncHelp" style="color:#92400E;font-weight:600;margin-left:auto;white-space:nowrap">Как настроить?</a>
+  </div>
+
+<!-- PAGE 1: ПОИСК -->
+<div class="page active" id="pageSearch">
+  <div style="margin:12px 0 6px;font-size:20px;font-weight:700">Добрый день!</div>
+  <div style="color:var(--t3);font-size:14px;margin-bottom:16px">Найдите себя в списке сотрудников</div>
+  <div style="position:relative;margin-bottom:12px">
+    <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--t3)" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M15 15l-3.5-3.5"/></svg>
+    <input class="search-box" id="empSearch" type="search" placeholder="Введите имя или логин…" autocomplete="off" autocorrect="off" spellcheck="false">
+  </div>
+  <div class="search-results" id="searchResults" style="display:none"></div>
+</div>
+
+<!-- PAGE 2: ФОРМА -->
+<div class="page" id="pageForm">
+  <!-- My tickets -->
+  <div id="myTicketsSection"></div>
+
+  <!-- My devices -->
+  <div id="myDevicesSection" style="margin-bottom:14px"></div>
+
+  <!-- My replacements history -->
+  <div id="myReplacementsSection" style="margin-bottom:14px"></div>
+
+  <!-- Profile -->
+  <div class="card mb-4" id="profileCard"></div>
+
+  <!-- Category -->
+  <div class="section-title">Тип проблемы</div>
+  <div class="cat-grid" id="catGrid">
+    <div class="cat-btn" data-cat="Компьютер / ПК">     <div class="cat-icon">🖥️</div><div class="cat-label">Компьютер / ПК</div></div>
+    <div class="cat-btn" data-cat="Принтер / МФУ">      <div class="cat-icon">🖨️</div><div class="cat-label">Принтер / МФУ</div></div>
+    <div class="cat-btn" data-cat="Замена картриджа">   <div class="cat-icon">🖊️</div><div class="cat-label">Замена картриджа</div></div>
+    <div class="cat-btn" data-cat="Интернет / Сеть">    <div class="cat-icon">🌐</div><div class="cat-label">Интернет / Сеть</div></div>
+    <div class="cat-btn" data-cat="1С / ERP">           <div class="cat-icon">💾</div><div class="cat-label">1С / ERP</div></div>
+    <div class="cat-btn" data-cat="Телефония">          <div class="cat-icon">📞</div><div class="cat-label">Телефония</div></div>
+    <div class="cat-btn" data-cat="Учётная запись">     <div class="cat-icon">🔑</div><div class="cat-label">Учётная запись</div></div>
+    <div class="cat-btn" data-cat="Другое">             <div class="cat-icon">❓</div><div class="cat-label">Другое</div></div>
+  </div>
+
+  <!-- Device -->
+  <div id="deviceSection" style="display:none">
+    <div class="section-title" id="deviceTitle">Устройство</div>
+    <div id="deviceList"></div>
+    <div style="height:12px"></div>
+  </div>
+
+  <!-- Priority -->
+  <div class="section-title">Приоритет</div>
+  <div class="prio-row">
+    <button class="prio-btn p-low"  data-p="Низкий">🟢 Низкий</button>
+    <button class="prio-btn p-mid active" data-p="Средний">🟡 Средний</button>
+    <button class="prio-btn p-high" data-p="Высокий">🔴 Высокий</button>
+  </div>
+
+  <!-- Description -->
+  <div class="section-title">Описание проблемы</div>
+  <textarea class="desc-box" id="descBox" placeholder="Опишите что произошло, когда возникло, что пробовали делать…" maxlength="1000"></textarea>
+  <div class="char-count"><span id="charLeft">0</span> / 1000</div>
+
+  <div class="error-msg" id="formError"></div>
+  <button class="submit-btn" id="submitBtn">📨 Отправить заявку</button>
+  <button class="back-btn" id="btnMyTickets">📋 Посмотреть мои заявки</button>
+  <button class="back-btn" id="btnBack">← Назад</button>
+</div>
+
+<!-- PAGE 3: УСПЕХ -->
+<div class="page" id="pageSuccess">
+  <div class="success-wrap">
+    <div class="success-icon">✅</div>
+    <h2 style="font-size:22px;font-weight:700;margin-bottom:10px">Заявка принята!</h2>
+    <p style="color:var(--t2);line-height:1.6;margin-bottom:20px">Ваше обращение зарегистрировано и не потеряется.<br>Мы свяжемся с вами в ближайшее время.</p>
+    <div class="ticket-num"><span>Номер заявки</span><b id="ticketNumDisplay"></b></div>
+    <button class="submit-btn" id="btnViewTickets">📋 Мои заявки</button>
+    <button class="back-btn" id="btnNewTicket">+ Новая заявка</button>
+  </div>
+</div>
+
+<!-- PAGE 4: МОИ ЗАЯВКИ -->
+<div class="page" id="pageMyTickets">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+    <button class="back-btn" style="width:auto;padding:8px 14px" id="btnBackToForm">←</button>
+    <div style="flex:1">
+      <div style="font-size:17px;font-weight:700" id="myTicketsHeader">Мои заявки</div>
+      <div style="font-size:12px;color:var(--t3)" id="myTicketsSub"></div>
+    </div>
+  </div>
+  <div class="pills" id="ticketPills">
+    <button class="pill active" data-f="all">Все</button>
+    <button class="pill" data-f="Новая">🔵 Новые</button>
+    <button class="pill" data-f="В работе">🟡 В работе</button>
+    <button class="pill" data-f="Решено">✅ Решено</button>
+    <button class="pill" data-f="Закрыта">⬜ Закрыты</button>
+  </div>
+  <div style="height:12px"></div>
+  <div id="myTicketsList"></div>
+</div>
+
+<!-- MODAL overlay -->
+<div class="overlay" id="overlay" style="display:none"><div class="modal" id="modal"></div></div>
+<!-- Bottom sheet -->
+<div class="sheet-overlay" id="sheetOverlay" style="display:none"><div class="sheet" id="sheet"></div></div>
+
+<script src="js/storage.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+<script src="js/employees.js"></script>
+<script src="js/tickets.js"></script>
+<script src="js/printers.js"></script>
+<script src="js/cartridges.js"></script>
+<script src="js/devices.js"></script>
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let selectedPerson = null;
+let selectedCat    = null;
+let selectedPrio   = 'Средний';
+let myTicketsFilter = 'all';
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+UI.modal.init();
+UI.sheet.init();
+
+Storage.init().then(() => App.loadData()).then(() => {
+    document.getElementById('syncWarn').style.display = Storage.isConfigured() ? 'none' : 'flex';
+  // Wire search
+  document.getElementById('empSearch').addEventListener('input', function () {
+    const q = this.value.trim();
+    const res = document.getElementById('searchResults');
+    if (q.length < 1) { res.style.display = 'none'; return; }
+    const hits = Employees.search(q, App.state.employees);
+    if (!hits.length) {
+      res.innerHTML = '<div style="padding:16px;text-align:center;color:var(--t3)">Не найдено</div>';
+    } else {
+      res.innerHTML = hits.map((e, i) => `
+        <div class="result-item" data-i="${i}">
+          <div class="avatar" style="width:38px;height:38px;font-size:13px;background:${UI.avatarColor(e.name)}">${UI.initials(e.name)}</div>
+          <div>
+            <div class="ri-name">${UI.esc(e.name)}</div>
+            <div class="ri-info">${UI.esc(e.dept || '—')}${e.login ? ' · ' + UI.esc(e.login) : ''}</div>
+          </div>
+        </div>`).join('');
+      res.querySelectorAll('.result-item').forEach((el, i) => {
+        el.addEventListener('click', () => selectPerson(hits[i]));
+      });
+    }
+    res.style.display = 'block';
+  });
+});
+
+// ── Select person ─────────────────────────────────────────────────────────────
+function selectPerson(person) {
+  selectedPerson = App.mergeOverride(person);
+  selectedCat    = null;
+  selectedPrio   = 'Средний';
+
+  // Profile card
+  document.getElementById('profileCard').innerHTML = Employees.profileCardHTML(selectedPerson);
+
+  // My devices section
+  Devices.renderSection('myDevicesSection', selectedPerson.name);
+
+  // My replacements history
+  renderMyReplacements(selectedPerson.name);
+
+  // My tickets preview
+  renderMyTicketsPreview();
+
+  // Reset form
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.prio-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-p="Средний"]').classList.add('active');
+  document.getElementById('descBox').value = '';
+  document.getElementById('charLeft').textContent = '0';
+  document.getElementById('formError').style.display = 'none';
+  document.getElementById('deviceSection').style.display = 'none';
+  Printers.reset();
+  Cartridges.resetSelected();
+
+  showPage('pageForm');
+}
+
+// ── My tickets preview (in form page) ─────────────────────────────────────────
+function renderMyTicketsPreview() {
+  if (!selectedPerson) return;
+  const all = Storage.tickets.all().filter(t => t.name === selectedPerson.name);
+  const sec = document.getElementById('myTicketsSection');
+  if (!all.length) { sec.innerHTML = ''; return; }
+  sec.innerHTML = `<div class="my-tickets-title">Мои заявки (${all.length})</div>
+    <div style="margin-bottom:14px">
+      ${all.slice(0, 3).map(t => `
+        <div class="ticket-card" style="margin-bottom:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+            <span class="mono text-muted">${UI.esc(t.id)}</span>
+            <span class="text-muted" style="font-size:11px">${UI.esc(t.created)}</span>
+          </div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">${UI.esc(t.category)}</div>
+          ${UI.statusBadge(t.status)}
+        </div>`).join('')}
+      ${all.length > 3 ? `<div style="text-align:center;font-size:13px;color:var(--accent);cursor:pointer" id="showAllTickets">Показать все (${all.length}) →</div>` : ''}
+    </div>`;
+  document.getElementById('showAllTickets')?.addEventListener('click', showMyTicketsPage);
+}
+
+// ── Category selection ────────────────────────────────────────────────────────
+document.getElementById('catGrid').querySelectorAll('.cat-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedCat = btn.dataset.cat;
+    handleCatSelect(selectedCat);
+  });
+});
+
+function handleCatSelect(cat) {
+  const section = document.getElementById('deviceSection');
+  const name = selectedPerson?.name || '';
+
+  if (cat === 'Замена картриджа') {
+    const mine = App.printersForEmployee(name, cat);
+    if (!mine.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    document.getElementById('deviceTitle').textContent = 'Принтер для замены';
+    Cartridges.resetSelected();
+    Cartridges.renderReplaceCards('deviceList', mine, name);
+  } else if (cat === 'Принтер / МФУ' || cat === 'Принтер этикеток') {
+    const mine = App.printersForEmployee(name, cat);
+    if (!mine.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    document.getElementById('deviceTitle').textContent = 'Устройство';
+    Printers.reset();
+    Printers.renderList('deviceList', cat, name);
+  } else if (cat === 'Компьютер / ПК' || cat === 'Интернет / Сеть') {
+    section.style.display = 'block';
+    document.getElementById('deviceTitle').textContent = 'Компьютер';
+    const p = selectedPerson;
+    const devices = [];
+    if (p?.computer) devices.push({ icon:'💻', name: p.computer, sub: 'Рабочий компьютер' });
+    devices.push({ icon:'💻', name: 'Другой компьютер', sub: 'Укажите в описании' });
+    Printers.reset();
+    Printers.renderSimple('deviceList', devices);
+  } else {
+    section.style.display = 'none';
+    Printers.reset();
+    Cartridges.resetSelected();
+  }
+}
+
+// ── Priority ──────────────────────────────────────────────────────────────────
+document.querySelectorAll('.prio-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.prio-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedPrio = btn.dataset.p;
+  });
+});
+
+// ── Description ───────────────────────────────────────────────────────────────
+document.getElementById('descBox').addEventListener('input', function () {
+  document.getElementById('charLeft').textContent = this.value.length;
+});
+
+// ── Submit ────────────────────────────────────────────────────────────────────
+document.getElementById('submitBtn').addEventListener('click', () => {
+  const desc  = document.getElementById('descBox').value.trim();
+  const err   = document.getElementById('formError');
+  if (!selectedCat) { showError(err, 'Выберите тип проблемы'); return; }
+  if (!desc)        { showError(err, 'Опишите проблему — это поможет решить её быстрее'); return; }
+  err.style.display = 'none';
+
+  const device = Cartridges.getSelectedDevice() || Printers.selected() || '';
+  const ticket = Tickets.create({ person: selectedPerson, category: selectedCat, device, priority: selectedPrio, description: desc });
+
+  renderMyTicketsPreview();
+  document.getElementById('ticketNumDisplay').textContent = ticket.id;
+  showPage('pageSuccess');
+});
+
+function showError(el, msg) { el.textContent = msg; el.style.display = 'block'; }
+
+// ── My tickets page ───────────────────────────────────────────────────────────
+function showMyTicketsPage() {
+  if (!selectedPerson) return;
+  document.getElementById('myTicketsHeader').textContent = 'Мои заявки';
+  document.getElementById('myTicketsSub').textContent = selectedPerson.name;
+  myTicketsFilter = 'all';
+  document.querySelectorAll('#ticketPills .pill').forEach(p => p.classList.remove('active'));
+  document.querySelector('#ticketPills [data-f="all"]').classList.add('active');
+  renderMyTicketsList();
+  showPage('pageMyTickets');
+}
+
+function renderMyTicketsList() {
+  Tickets.renderUserList({
+    containerId: 'myTicketsList',
+    personName: selectedPerson?.name || '',
+    filterStatus: myTicketsFilter,
+    onDetail: openTicketDetail,
+    onDuplicate: duplicateTicket,
+  });
+}
+
+function openTicketDetail(t) {
+  const statusMap = { 'Новая':'🔵 Новая', 'В работе':'🟡 В работе', 'Решено':'✅ Решено', 'Закрыта':'⬜ Закрыта' };
+  UI.sheet.open(`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:16px;font-weight:700">Заявка ${UI.esc(t.id)}</div>
+      <button onclick="document.getElementById('sheetOverlay').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--t3)">✕</button>
+    </div>
+    <div style="margin-bottom:14px">${UI.statusBadge(t.status)}</div>
+    ${UI.modalRow('Дата', t.created)}
+    ${UI.modalRow('Категория', t.category)}
+    ${UI.modalRow('Устройство', t.device)}
+    ${UI.modalRow('Приоритет', t.priority)}
+    <div style="margin-top:8px"><div class="modal-label">Описание</div><div class="modal-desc">${UI.esc(t.description)}</div></div>
+    <button class="submit-btn" style="margin-top:16px" onclick="document.getElementById('sheetOverlay').style.display='none'">Закрыть</button>`);
+}
+
+function duplicateTicket(t) {
+  document.getElementById('descBox').value = t.description;
+  document.getElementById('charLeft').textContent = t.description.length;
+  selectedPrio = t.priority;
+  document.querySelectorAll('.prio-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.p === t.priority);
+  });
+  document.querySelectorAll('.cat-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.cat === t.category);
+  });
+  selectedCat = t.category;
+  handleCatSelect(t.category);
+  showPage('pageForm');
+  window.scrollTo(0, 0);
+}
+
+// ── Pill filter (my tickets page) ─────────────────────────────────────────────
+document.getElementById('ticketPills').querySelectorAll('.pill').forEach(p => {
+  p.addEventListener('click', () => {
+    document.querySelectorAll('#ticketPills .pill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    myTicketsFilter = p.dataset.f;
+    renderMyTicketsList();
+  });
+});
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+document.getElementById('btnBack').addEventListener('click', () => {
+  selectedPerson = null;
+  document.getElementById('empSearch').value = '';
+  document.getElementById('searchResults').style.display = 'none';
+  showPage('pageSearch');
+});
+document.getElementById('btnBackToForm').addEventListener('click', () => {
+  showPage('pageForm');
+  if (selectedPerson) Devices.renderSection('myDevicesSection', selectedPerson.name);
+});
+document.getElementById('btnMyTickets').addEventListener('click', showMyTicketsPage);
+document.getElementById('btnViewTickets').addEventListener('click', showMyTicketsPage);
+document.getElementById('btnNewTicket').addEventListener('click', () => {
+  document.getElementById('empSearch').value = '';
+  document.getElementById('searchResults').style.display = 'none';
+  showPage('pageSearch');
+});
+
+// ── My replacements history ──────────────────────────────────────────────────
+function renderMyReplacements(personName) {
+  const sec = document.getElementById('myReplacementsSection');
+  if (!sec) return;
+  const reps = Storage.replacements.all()
+    .filter(r => r.person === personName)
+    .slice(0, 20);
+
+  if (!reps.length) { sec.innerHTML = ''; return; }
+
+  sec.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:16px;font-weight:700">История замен картриджей
+        <span style="font-size:13px;color:var(--t3);font-weight:400;margin-left:6px">(${reps.length})</span>
+      </div>
+    </div>
+    <div style="background:#fff;border:1.5px solid var(--bd);border-radius:var(--r);overflow:hidden">
+      ${reps.map(r => `
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 13px;border-bottom:1px solid var(--bd)">
+          <div style="font-size:18px;flex-shrink:0">🖨️</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600">${UI.esc(r.printerName || '—')}</div>
+            <div style="font-size:11px;color:var(--accent);margin-top:1px">${UI.esc(r.cartridge || '—')}</div>
+            ${r.location ? `<div style="font-size:11px;color:var(--t3)">📍 ${UI.esc(r.location)}</div>` : ''}
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:11px;color:var(--t3)">${UI.esc(r.created || '')}</div>
+            <div style="font-size:12px;font-weight:600;color:var(--gn);margin-top:2px">−${r.qty || 1} шт.</div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+</script>
+
+  <!-- Sync setup modal -->
+  <div id="syncSetupOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#fff;border-radius:14px;max-width:480px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:8px">Настройка общего склада</h2>
+      <p style="font-size:13px;color:#4A5568;line-height:1.6;margin-bottom:16px">
+        Для синхронизации остатков картриджей между всеми пользователями используется <b>JSONBin.io</b> — бесплатный облачный JSON-хостинг.
+      </p>
+      <ol style="font-size:13px;color:#4A5568;line-height:2;padding-left:18px;margin-bottom:16px">
+        <li>Зарегистрируйтесь на <a href="https://jsonbin.io" target="_blank" style="color:#1A56A0">jsonbin.io</a></li>
+        <li>Создайте новый Bin с содержимым: <code style="background:#F0F2F5;padding:2px 6px;border-radius:4px">{}</code></li>
+        <li>Скопируйте <b>BIN ID</b> и <b>X-Master-Key</b></li>
+        <li>Вставьте их ниже и нажмите Сохранить</li>
+      </ol>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+        <input id="cfgBinId" placeholder="BIN ID (напр. 665abc123...)" style="padding:9px 12px;border:1.5px solid #E2E6EC;border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+        <input id="cfgApiKey" placeholder="X-Master-Key ($2b$10$...)" style="padding:9px 12px;border:1.5px solid #E2E6EC;border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button id="cfgSave" style="flex:1;padding:10px;background:#1A56A0;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Сохранить и синхронизировать</button>
+        <button id="cfgClose" style="padding:10px 16px;background:#F0F2F5;border:none;border-radius:8px;font-size:14px;cursor:pointer">Отмена</button>
+      </div>
+      <div id="cfgStatus" style="margin-top:10px;font-size:12px;color:#4A5568"></div>
+    </div>
+  </div>
+</body>
+</html>
