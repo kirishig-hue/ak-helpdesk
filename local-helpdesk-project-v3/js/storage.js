@@ -31,12 +31,14 @@ const Storage = (() => {
 
   // ── Push в JSONBin ────────────────────────────────────────────────────────────
   let _pushTimer = null;
+  let _cartDirty = false; // true когда cartstock изменён локально но ещё не запушен
+  let _ticketDirty = false; // true когда заявки изменены локально но ещё не запушены
 
   function _save() {
     _toLocal(_cache);
     // Debounce: ждём 300мс чтобы не спамить API при быстрых изменениях
     clearTimeout(_pushTimer);
-    _pushTimer = setTimeout(_push, 300);
+    _pushTimer = setTimeout(_push, (_cartDirty || _ticketDirty) ? 100 : 500);
   }
 
   async function _push() {
@@ -57,6 +59,8 @@ const Storage = (() => {
         _notifyListeners('error');
         return;
       }
+      _cartDirty = false;
+      _ticketDirty = false;
       _notifyListeners('ok');
     } catch (e) {
       console.error('JSONBin push failed:', e);
@@ -92,6 +96,11 @@ const Storage = (() => {
       const localOnlyTickets = (_cache ? _cache.tickets      || [] : []).filter(t => !remoteTicketIds.has(t.id));
       const localOnlyReps    = (_cache ? _cache.replacements || [] : []).filter(r => !remoteRepTs.has(r.ts));
 
+      // Сохраняем локальные данные если они были изменены и ещё не запушены
+      const localCartstock  = _cartDirty   && _cache ? { ...(_cache.cartstock || {}) } : null;
+      const localTickets    = _ticketDirty && _cache ? [...(_cache.tickets || [])]     : null;
+      const localReps       = _ticketDirty && _cache ? [...(_cache.replacements || [])] : null;
+
       _cache = {
         ..._default(),
         ...remote,
@@ -99,10 +108,41 @@ const Storage = (() => {
         replacements: [...localOnlyReps,     ...(remote.replacements || [])],
       };
 
-      // Если есть локальные данные которых нет в remote — пушим обратно
-      if (localOnlyTickets.length > 0 || localOnlyReps.length > 0) {
-        await _push();
+      let needPush = false;
+
+      // Если cartstock был изменён локально — объединяем (локальные изменения приоритетнее)
+      if (localCartstock) {
+        _cache.cartstock = { ...(_cache.cartstock || {}), ...localCartstock };
+        needPush = true;
       }
+
+      // Если заявки/замены были изменены локально — сохраняем локальную версию
+      if (localTickets) {
+        // Мерж: все remote заявки + локальные которых нет в remote
+        const remIds = new Set((remote.tickets || []).map(t => t.id));
+        const merged = [...(remote.tickets || [])];
+        // Обновляем статусы из локальных данных (они новее)
+        localTickets.forEach(lt => {
+          const ri = merged.findIndex(t => t.id === lt.id);
+          if (ri >= 0) merged[ri] = lt; // локальная версия приоритетнее
+          else merged.unshift(lt); // новая заявка
+        });
+        _cache.tickets = merged;
+        needPush = true;
+      }
+      if (localReps) {
+        // Добавляем локальные замены которых нет в remote
+        const remTs = new Set((remote.replacements || []).map(r => r.ts));
+        const newReps = localReps.filter(r => !remTs.has(r.ts));
+        if (newReps.length > 0) {
+          _cache.replacements = [...newReps, ..._cache.replacements];
+          needPush = true;
+        }
+      }
+
+      // Есть локальные данные не в remote — пушим
+      if (localOnlyTickets.length > 0 || localOnlyReps.length > 0) needPush = true;
+      if (needPush) await _push();
 
       _toLocal(_cache);
       _notifyListeners('ok');
@@ -132,12 +172,12 @@ const Storage = (() => {
   const tickets = {
     all:  ()    => _data().tickets || [],
     find: (id)  => tickets.all().find(t => t.id === id) || null,
-    add(t)      { _data().tickets.unshift(t); _save(); },
+    add(t)      { _data().tickets.unshift(t); _ticketDirty = true; _save(); },
     update(id, fields) {
       const a = tickets.all(), i = a.findIndex(t => t.id === id);
-      if (i >= 0) { a[i] = { ...a[i], ...fields }; _save(); }
+      if (i >= 0) { a[i] = { ...a[i], ...fields }; _ticketDirty = true; _save(); }
     },
-    remove(id)  { _data().tickets = tickets.all().filter(t => t.id !== id); _save(); },
+    remove(id)  { _data().tickets = tickets.all().filter(t => t.id !== id); _ticketDirty = true; _save(); },
   };
 
   // ── Cart stock — по артикулу картриджа ───────────────────────────────────────
@@ -155,6 +195,7 @@ const Storage = (() => {
     setByArticle(article, n) {
       if (!article) return;
       cart._s()[article] = Math.max(0, n);
+      _cartDirty = true;
       _save();
     },
     adjustByArticle(article, delta) {
@@ -179,7 +220,7 @@ const Storage = (() => {
   // ── Replacements ──────────────────────────────────────────────────────────────
   const replacements = {
     all:  ()     => _data().replacements || [],
-    add(entry)   { _data().replacements.unshift(entry); _save(); },
+    add(entry)   { _data().replacements.unshift(entry); _ticketDirty = true; _save(); },
     today(pid) {
       const t = new Date().toLocaleDateString('ru-RU');
       return replacements.all()
