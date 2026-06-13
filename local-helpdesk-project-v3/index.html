@@ -6,16 +6,27 @@
 <title>IT-портал — АК-Сервис</title>
 <link rel="stylesheet" href="css/main.css">
 <style>
-.hero{max-width:640px;margin:60px auto 0;padding:0 20px;text-align:center}
-.hero h1{font-size:28px;font-weight:800;margin-bottom:8px}
-.hero p{font-size:15px;color:var(--t2);margin-bottom:36px;line-height:1.6}
-.nav-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;max-width:800px;margin:0 auto;padding:0 20px 40px}
-.nav-card{background:var(--sf);border:1.5px solid var(--bd);border-radius:var(--r);padding:22px 20px;text-align:center;text-decoration:none;color:var(--tx);transition:box-shadow .15s,transform .15s;display:block}
-.nav-card:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}
-.nav-card-icon{font-size:40px;margin-bottom:12px}
-.nav-card-title{font-size:17px;font-weight:700;margin-bottom:6px}
-.nav-card-desc{font-size:13px;color:var(--t2);line-height:1.5}
-.badge-mobile{display:inline-block;background:var(--gnb);color:var(--gn);font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;margin-left:6px;vertical-align:middle}
+.hero{max-width:640px;margin:30px auto 0;padding:0 16px;text-align:center}
+.hero h1{font-size:22px;font-weight:800;margin-bottom:6px}
+.hero p{font-size:14px;color:var(--t2);margin-bottom:24px;line-height:1.5}
+.nav-cards{display:grid;grid-template-columns:1fr;gap:10px;max-width:500px;margin:0 auto;padding:0 16px 30px}
+.nav-card{background:var(--sf);border:1.5px solid var(--bd);border-radius:var(--r);padding:18px 16px;text-align:center;text-decoration:none;color:var(--tx);display:block;-webkit-tap-highlight-color:transparent}
+.nav-card:active{background:var(--al)}
+.nav-card-icon{font-size:36px;margin-bottom:8px}
+.nav-card-title{font-size:16px;font-weight:700;margin-bottom:4px}
+.nav-card-desc{font-size:12px;color:var(--t2);line-height:1.4}
+.badge-mobile{display:inline-block;background:var(--gnb);color:var(--gn);font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;margin-left:4px;vertical-align:middle}
+@media(min-width:600px){
+  .hero{margin-top:50px}
+  .hero h1{font-size:28px}
+  .hero p{font-size:15px;margin-bottom:36px}
+  .nav-cards{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;padding:0 20px 40px}
+  .nav-card{padding:22px 20px}
+  .nav-card:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}
+  .nav-card-icon{font-size:40px}
+  .nav-card-title{font-size:17px}
+  .nav-card-desc{font-size:13px}
+}
 </style>
 </head>
 <body>
@@ -24,12 +35,12 @@
   <div class="logo"><div class="logo-icon">АК</div><span class="logo-text">АК-Сервис</span></div>
   <div class="hdr-sep"></div>
   <span class="hdr-title">IT-портал</span>
-  <nav class="hdr-nav">
-    <a href="index.html" class="active">🏠 Главная</a>
-    <a href="tickets.html">📋 Заявка</a>
-    <a href="helpdesk.html">🖥 Helpdesk</a>
-    <a href="inventory.html">🖨 Инвентарь</a>
-  </nav>
+  <div class="hdr-tabs">
+    <a class="btn btn-ghost active" href="index.html">🏠 Главная</a>
+    <a class="btn btn-ghost" href="tickets.html">📋 Заявка</a>
+    <a class="btn btn-ghost" href="helpdesk.html">🖥 Helpdesk</a>
+    <a class="btn btn-ghost" href="inventory.html">🖨 Инвентарь</a>
+  </div>
 </div>
 
 <div class="hero">

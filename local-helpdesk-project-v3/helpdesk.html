@@ -8,6 +8,12 @@
 <style>
 .tab-pane{display:none}
 .tab-pane.active{display:block}
+/* Cart tab toolbar stacked on mobile */
+@media(max-width:599px){
+  .cart-toolbar{flex-direction:column}
+  .cart-toolbar .search-wrap{width:100%}
+  .cart-toolbar select.search-input{width:100%}
+}
 </style>
 </head>
 <body>
@@ -15,19 +21,18 @@
 <div class="hdr">
   <div class="logo"><div class="logo-icon">АК</div><span class="logo-text">АК-Сервис</span></div>
   <div class="hdr-sep"></div>
-  <span class="hdr-title">IT Helpdesk</span>
-  <div class="hdr-nav" style="margin-left:auto">
-    <a href="index.html">🏠</a>
-    <a href="tickets.html">📱 Заявка</a>
-    <a href="inventory.html">🖨 Инвентарь</a>
+  <span class="hdr-title">Helpdesk</span>
+  <div class="hdr-actions">
+    <span class="sync-badge" id="syncBadge"><span class="sync-dot" id="syncDot"></span><span id="syncLabel">…</span></span>
+    <button class="btn btn-ghost" id="btnRefresh">⟳</button>
+    <button class="btn btn-ghost" id="btnCsv">↓</button>
   </div>
-  <div style="display:flex;gap:6px;margin-left:8px;flex-wrap:wrap">
+  <div class="hdr-tabs">
     <button class="btn btn-ghost active" id="tabTicketsBtn">📋 Заявки</button>
     <button class="btn btn-ghost" id="tabCartBtn">🖨 Картриджи</button>
-    <button class="btn btn-ghost" id="tabDevBtn">📦 Инвентарь техники</button>
-    <span class="sync-badge" id="syncBadge"><span class="sync-dot" id="syncDot"></span><span id="syncLabel">Нет синхр.</span></span>
-    <button class="btn btn-ghost" id="btnRefresh">⟳</button>
-    <button class="btn btn-ghost" id="btnCsv">↓ CSV заявки</button>
+    <button class="btn btn-ghost" id="tabDevBtn">📦 Техника</button>
+    <a class="btn btn-ghost" href="tickets.html">📱 Заявка</a>
+    <a class="btn btn-ghost" href="inventory.html">🖨 Инвентарь</a>
   </div>
 </div>
 
@@ -77,12 +82,12 @@
 <!-- CART TAB -->
 <div class="tab-pane" id="paneCart">
   <div class="stats-row" id="cartStatsRow"></div>
-  <div class="toolbar">
-    <div class="search-wrap" style="flex:1;max-width:280px">
+  <div class="toolbar cart-toolbar">
+    <div class="search-wrap">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M15 15l-3.5-3.5"/></svg>
       <input class="search-input" id="cartSearch" placeholder="Поиск принтера…" autocomplete="off">
     </div>
-    <select class="search-input" id="cartFilter" style="max-width:200px;padding-left:10px">
+    <select class="search-input" id="cartFilter" style="padding-left:10px">
       <option value="all">Все принтеры</option>
       <option value="low">⚠ Остаток ≤ 2</option>
       <option value="zero">🔴 Нет на складе</option>
@@ -119,12 +124,12 @@
 
 <!-- DEVICES PANE -->
 <div class="tab-pane" id="paneDevices">
-  <div class="toolbar">
-    <div class="search-wrap" style="flex:1;max-width:320px">
+  <div class="toolbar cart-toolbar">
+    <div class="search-wrap">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M15 15l-3.5-3.5"/></svg>
       <input class="search-input" id="devSearch" placeholder="Поиск по сотруднику, модели…" autocomplete="off">
     </div>
-    <select class="search-input" id="devTypeFilter" style="max-width:200px;padding-left:10px">
+    <select class="search-input" id="devTypeFilter" style="padding-left:10px">
       <option value="all">Все типы</option>
     </select>
     <button class="btn btn-secondary" id="btnExportDevices">↓ CSV инвентарь</button>

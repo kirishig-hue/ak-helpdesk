@@ -5,21 +5,28 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Инвентарь — АК-Сервис</title>
 <link rel="stylesheet" href="css/main.css">
+<style>
+@media(max-width:599px){
+  .cart-toolbar{flex-direction:column}
+  .cart-toolbar .search-wrap{width:100%}
+  .cart-toolbar select.search-input{width:100%}
+}
+</style>
 </head>
 <body>
 
 <div class="hdr">
   <div class="logo"><div class="logo-icon">АК</div><span class="logo-text">АК-Сервис</span></div>
   <div class="hdr-sep"></div>
-  <span class="hdr-title">Инвентарь принтеров</span>
-  <div class="hdr-nav" style="margin-left:auto">
-    <a href="index.html">🏠</a>
-    <a href="tickets.html">📱 Заявка</a>
-    <a href="helpdesk.html">🖥 Helpdesk</a>
+  <span class="hdr-title">Инвентарь</span>
+  <div class="hdr-actions">
+    <button class="btn btn-ghost" id="btnExportPrinters">↓ CSV</button>
+    <button class="btn btn-ghost" id="btnExportMileage">↓ Пробег</button>
   </div>
-  <div style="display:flex;gap:6px;margin-left:8px">
-    <button class="btn btn-ghost" id="btnExportPrinters">↓ CSV принтеры</button>
-    <button class="btn btn-ghost" id="btnExportMileage">↓ CSV пробег</button>
+  <div class="hdr-tabs">
+    <a class="btn btn-ghost" href="index.html">🏠</a>
+    <a class="btn btn-ghost" href="tickets.html">📱 Заявка</a>
+    <a class="btn btn-ghost" href="helpdesk.html">🖥 Helpdesk</a>
   </div>
 </div>
 
@@ -32,15 +39,15 @@
 
 <div class="stats-row" id="invStats"></div>
 
-<div class="toolbar">
-  <div class="search-wrap" style="flex:1;max-width:320px">
+<div class="toolbar cart-toolbar" style="flex-wrap:wrap">
+  <div class="search-wrap">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M15 15l-3.5-3.5"/></svg>
     <input class="search-input" id="invSearch" placeholder="Поиск принтера…" autocomplete="off">
   </div>
-  <select class="search-input" id="invBrand" style="max-width:160px;padding-left:10px">
+  <select class="search-input" id="invBrand" style="padding-left:10px">
     <option value="all">Все бренды</option>
   </select>
-  <select class="search-input" id="invFilter" style="max-width:180px;padding-left:10px">
+  <select class="search-input" id="invFilter" style="padding-left:10px">
     <option value="all">Все принтеры</option>
     <option value="low">⚠ Картриджей ≤ 2</option>
     <option value="zero">🔴 Нет картриджа</option>
