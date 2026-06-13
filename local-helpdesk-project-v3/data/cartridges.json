@@ -24,12 +24,8 @@
   {
     "article": "HP 26X / CS-CF283X-MPSXL",
     "qty": 7,
-    "stock_per_printer": {
-      "4": 7
-    },
-    "printers": [
-      4
-    ]
+    "stock_per_printer": {},
+    "printers": []
   },
   {
     "article": "HP 30X / CS-CF230X",
@@ -260,6 +256,16 @@
     },
     "printers": [
       53
+    ]
+  },
+  {
+    "article": "CS-CF226X",
+    "qty": 0,
+    "stock_per_printer": {
+      "4": 0
+    },
+    "printers": [
+      4
     ]
   }
 ]
