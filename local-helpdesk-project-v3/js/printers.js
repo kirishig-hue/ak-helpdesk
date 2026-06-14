@@ -145,7 +145,7 @@ const Printers = (() => {
         item.classList.add('selected');
         item.querySelector('.device-radio')?.classList.add('on');
         const pr = App.state.printers.find(p => p.id === +item.dataset.pid);
-        if (pr) _selectedDevice = `${UI.esc(pr.brand)} ${UI.esc(pr.model)}${pr.location ? ' (' + pr.location + (pr.cabinet ? ' каб.' + pr.cabinet : '') + ')' : ''}`;
+        if (pr) _selectedDevice = `${pr.brand} ${pr.model}${pr.location ? ' (' + pr.location + (pr.cabinet ? ' каб.' + pr.cabinet : '') + ')' : ''}`;
       });
     });
   }

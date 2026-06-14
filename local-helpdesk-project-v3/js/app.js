@@ -65,19 +65,7 @@ const App = (() => {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function genId() {
-    // Find max existing numeric ID across all loaded tickets
-    const all = Storage.tickets.all();
-    let maxNum = 0;
-    all.forEach(t => {
-      const m = t.id && t.id.match(/^(\d+)$/);
-      if (m) maxNum = Math.max(maxNum, parseInt(m[1]));
-    });
-    // If we have numeric tickets, increment; otherwise use timestamp fallback
-    if (maxNum > 0 || all.some(t => t.id && /^\d+$/.test(t.id))) {
-      return String(maxNum + 1).padStart(4, '0');
-    }
-    // Fallback: timestamp-based (for first ticket before JSONBin loads)
-    return String(Date.now()).slice(-4).padStart(4, '0');
+    return 'TK-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2,5).toUpperCase();
   }
   function nowStr() {
     return new Date().toLocaleString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});

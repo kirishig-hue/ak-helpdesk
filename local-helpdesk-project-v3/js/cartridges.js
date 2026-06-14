@@ -67,7 +67,7 @@ const Cartridges = (() => {
           card.querySelectorAll('.device-radio').forEach(r => r.classList.remove('on'));
           item.classList.add('selected');
           item.querySelector('.device-radio').classList.add('on');
-          window._crcSelectedDevice = `${UI.esc(pr.brand)} ${UI.esc(pr.model)}${pr.location ? ' (' + pr.location + (pr.cabinet ? ' каб.' + pr.cabinet : '') + ')' : ''}`;
+          window._crcSelectedDevice = `${pr.brand} ${pr.model}${pr.location ? ' (' + pr.location + (pr.cabinet ? ' каб.' + pr.cabinet : '') + ')' : ''}`;
         });
 
         // Wire replace button
@@ -86,7 +86,7 @@ const Cartridges = (() => {
               ts:          Date.now(),
               created:     App.nowStr(),
               printerId:   pr.id,
-              printerName: `${UI.esc(pr.brand)} ${UI.esc(pr.model)}`,
+              printerName: `${pr.brand} ${pr.model}`,
               location:    pr.location  || '',
               cabinet:     pr.cabinet   || '',
               cartridge:   pr.cartridge || '',
@@ -100,7 +100,7 @@ const Cartridges = (() => {
             card.querySelectorAll('.device-radio').forEach(r => r.classList.remove('on'));
             item.classList.add('selected');
             item.querySelector('.device-radio').classList.add('on');
-            window._crcSelectedDevice = `${UI.esc(pr.brand)} ${UI.esc(pr.model)}${pr.location ? ' (' + pr.location + ')' : ''}`;
+            window._crcSelectedDevice = `${pr.brand} ${pr.model}${pr.location ? ' (' + pr.location + ')' : ''}`;
 
             // Flash and re-render ALL items with same cartridge (shared stock)
             btn.textContent = '✅ Списано!';
@@ -140,7 +140,7 @@ const Cartridges = (() => {
 
   // ── Stock table (helpdesk / inventory) ────────────────────────────────────────
   // Группировка по артикулу — одна строка на уникальный картридж
-  function renderStockTable({ tbodyId, searchQ = '', filter = 'all', brand = 'all' }) {
+  function renderStockTable({ tbodyId, searchQ = '', filter = 'all' }) {
     const q = (searchQ || '').toLowerCase();
 
     // Build unique articles from printers
@@ -159,16 +159,9 @@ const Cartridges = (() => {
       if (filter === 'low'  && !(cnt !== null && cnt > 0 && cnt <= 2)) return false;
       if (filter === 'zero' && cnt !== 0)   return false;
       if (filter === 'unk'  && cnt !== null) return false;
-      if (brand !== 'all' && !row.printers.some(p => p.brand === brand)) return false;
       if (q) {
         return row.article.toLowerCase().includes(q) ||
-          row.printers.some(p =>
-            (p.model||'').toLowerCase().includes(q) ||
-            (p.brand||'').toLowerCase().includes(q) ||
-            (p.location||'').toLowerCase().includes(q) ||
-            (p.owner||'').toLowerCase().includes(q) ||
-            row.article.toLowerCase().includes(q)
-          );
+          row.printers.some(p => (p.model||'').toLowerCase().includes(q) || (p.location||'').toLowerCase().includes(q) || (p.owner||'').toLowerCase().includes(q));
       }
       return true;
     });
@@ -185,7 +178,7 @@ const Cartridges = (() => {
       const cnt   = row.cnt;
       const tod   = Storage.replacements.todayByArticle(row.article);
       const tot   = Storage.replacements.totalByArticle(row.article);
-      const names = [...new Set(row.printers.map(p => `${UI.esc(p.brand)} ${UI.esc(p.model)}`))].join(', ');
+      const names = [...new Set(row.printers.map(p => `${p.brand} ${p.model}`))].join(', ');
       const owners = [...new Set(row.printers.map(p => p.owner).filter(Boolean))].join(', ');
       return `<tr>
         <td style="font-size:12px;color:var(--accent);font-weight:600">${UI.esc(row.article)}</td>
@@ -260,7 +253,7 @@ const Cartridges = (() => {
     const headers = ['Артикул/картридж','Принтеры','Кол-во принтеров','На складе','Замен сегодня','Замен всего'];
     const rows = Object.values(articleMap).map(row => {
       const cnt   = Storage.cart.getByArticle(row.article);
-      const names = [...new Set(row.printers.map(p => `${UI.esc(p.brand)} ${UI.esc(p.model)}`))].join('; ');
+      const names = [...new Set(row.printers.map(p => `${p.brand} ${p.model}`))].join('; ');
       return [row.article, names, row.printers.length, cnt === null ? 'н/д' : cnt,
               Storage.replacements.todayByArticle(row.article),
               Storage.replacements.totalByArticle(row.article)];

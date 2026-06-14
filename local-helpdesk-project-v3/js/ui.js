@@ -6,7 +6,7 @@ const UI = (() => {
 
   // ── Escape HTML ──────────────────────────────────────────────────────────────
   function esc(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/`/g,'&#96;').replace(/\$/g,'&#36;');
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   // ── Avatars ──────────────────────────────────────────────────────────────────
@@ -68,8 +68,10 @@ const UI = (() => {
     init() {
       this._overlay = document.getElementById('overlay');
       this._modal   = document.getElementById('modal');
+      this._openedAt = 0;
       if (this._overlay) {
         this._overlay.addEventListener('click', e => {
+          if (Date.now() - this._openedAt < 300) return;
           if (e.target === this._overlay) this.close();
         });
       }
@@ -80,6 +82,7 @@ const UI = (() => {
       if (!this._modal || !this._overlay) return;
       this._modal.innerHTML = html;
       this._overlay.style.display = 'flex';
+      this._openedAt = Date.now();
       // wire close button
       const btn = this._modal.querySelector('.modal-close');
       if (btn) btn.addEventListener('click', () => this.close());
