@@ -90,58 +90,51 @@ const Storage = (() => {
 
       // Мерж: берём remote как источник правды
       // Но добавляем локальные tickets/replacements которых нет в remote
-      const remoteTicketIds  = new Set((remote.tickets      || []).map(t => t.id));
-      const remoteRepTs      = new Set((remote.replacements || []).map(r => r.ts));
+      // Remote — источник правды для tickets и replacements
+      // Локальные добавляем ТОЛЬКО если remote не был намеренно очищен
+      // Признак намеренной очистки: remote.tickets пустой И remote.stockSeeded=true
+      const remoteCleaned = Array.isArray(remote.tickets) && remote.tickets.length === 0 && remote.stockSeeded;
 
-      const localOnlyTickets = (_cache ? _cache.tickets      || [] : []).filter(t => !remoteTicketIds.has(t.id));
-      const localOnlyReps    = (_cache ? _cache.replacements || [] : []).filter(r => !remoteRepTs.has(r.ts));
+      let mergedTickets, mergedReps;
 
-      // Сохраняем локальные данные если они были изменены и ещё не запушены
-      const localCartstock  = _cartDirty   && _cache ? { ...(_cache.cartstock || {}) } : null;
-      const localTickets    = _ticketDirty && _cache ? [...(_cache.tickets || [])]     : null;
-      const localReps       = _ticketDirty && _cache ? [...(_cache.replacements || [])] : null;
+      if (remoteCleaned) {
+        // Remote намеренно очищен — принимаем как есть, локальный кэш сбрасываем
+        mergedTickets = [];
+        mergedReps    = remote.replacements || [];
+        _ticketDirty  = false;
+      } else {
+        // Обычный мерж: добавляем локальные данные которых нет в remote
+        const remoteTicketIds = new Set((remote.tickets || []).map(t => t.id));
+        const remoteRepTs     = new Set((remote.replacements || []).map(r => r.ts));
+        const localOnlyTickets = (_cache ? _cache.tickets || [] : []).filter(t => !remoteTicketIds.has(t.id));
+        const localOnlyReps    = (_cache ? _cache.replacements || [] : []).filter(r => !remoteRepTs.has(r.ts));
+        mergedTickets = [...localOnlyTickets, ...(remote.tickets || [])];
+        mergedReps    = [...localOnlyReps,    ...(remote.replacements || [])];
+      }
+
+      // Сохраняем локальный cartstock если грязный
+      const localCartstock = _cartDirty && _cache ? { ...(_cache.cartstock || {}) } : null;
 
       _cache = {
         ..._default(),
         ...remote,
-        tickets:      [...localOnlyTickets,  ...(remote.tickets      || [])],
-        replacements: [...localOnlyReps,     ...(remote.replacements || [])],
+        tickets:      mergedTickets,
+        replacements: mergedReps,
       };
 
       let needPush = false;
 
-      // Если cartstock был изменён локально — объединяем (локальные изменения приоритетнее)
       if (localCartstock) {
         _cache.cartstock = { ...(_cache.cartstock || {}), ...localCartstock };
         needPush = true;
       }
 
-      // Если заявки/замены были изменены локально — сохраняем локальную версию
-      if (localTickets) {
-        // Мерж: все remote заявки + локальные которых нет в remote
-        const remIds = new Set((remote.tickets || []).map(t => t.id));
-        const merged = [...(remote.tickets || [])];
-        // Обновляем статусы из локальных данных (они новее)
-        localTickets.forEach(lt => {
-          const ri = merged.findIndex(t => t.id === lt.id);
-          if (ri >= 0) merged[ri] = lt; // локальная версия приоритетнее
-          else merged.unshift(lt); // новая заявка
-        });
-        _cache.tickets = merged;
+      // Если есть локальные новые данные — пушим
+      if (!remoteCleaned && (mergedTickets.length > (remote.tickets || []).length ||
+          mergedReps.length > (remote.replacements || []).length)) {
         needPush = true;
       }
-      if (localReps) {
-        // Добавляем локальные замены которых нет в remote
-        const remTs = new Set((remote.replacements || []).map(r => r.ts));
-        const newReps = localReps.filter(r => !remTs.has(r.ts));
-        if (newReps.length > 0) {
-          _cache.replacements = [...newReps, ..._cache.replacements];
-          needPush = true;
-        }
-      }
 
-      // Есть локальные данные не в remote — пушим
-      if (localOnlyTickets.length > 0 || localOnlyReps.length > 0) needPush = true;
       if (needPush) await _push();
 
       _toLocal(_cache);
