@@ -65,7 +65,13 @@ const App = (() => {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function genId() {
-    return 'TK-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2,5).toUpperCase();
+    const all = Storage.tickets.all();
+    let maxNum = 0;
+    all.forEach(t => {
+      const m = t.id && t.id.match(/^(\d+)$/);
+      if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+    });
+    return String(maxNum + 1).padStart(4, '0');
   }
   function nowStr() {
     return new Date().toLocaleString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
