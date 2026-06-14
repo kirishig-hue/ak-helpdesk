@@ -59,8 +59,8 @@ const Tickets = (() => {
       `<tr class="clickable" data-id="${UI.esc(t.id)}">
         <td class="mono text-muted">${UI.esc(t.id)}</td>
         <td style="white-space:nowrap;font-size:12px;color:var(--t2)">${UI.esc(t.created)}</td>
-        <td><div class="td-name">${UI.esc(t.name)}</div><div class="td-sub">${UI.esc(t.dept || '')}${t.ext ? ' · доб.' + t.ext : ''}</div></td>
-        <td>${UI.esc(t.category)}${t.device ? `<div class="td-sub">${UI.esc(t.device)}</div>` : ''}</td>
+        <td><div class="td-name">${UI.esc(t.name)}</div><div class="td-sub">${UI.esc(t.dept || '')}${t.ext ? ' · доб.' + UI.esc(t.ext) : ''}</div></td>
+        <td>${UI.esc(t.category)}${t.device ? '<div class="td-sub">' + UI.esc(t.device) + '</div>' : ''}</td>
         <td>${UI.prioBadge(t.priority)}</td>
         <td class="td-truncate" title="${UI.esc(t.description)}">${UI.esc(t.description)}</td>
         <td>${UI.statusBadge(t.status)}</td>
@@ -138,33 +138,55 @@ const Tickets = (() => {
       { s:'Закрыта',  cls:'sb-closed', em:'⬜' },
     ];
 
-    const html = `
-      <div class="modal-head">
-        <div><div class="modal-title">${UI.esc(t.id)}</div><div class="modal-sub">${UI.esc(t.created)} · ${UI.esc(t.name)}</div></div>
-        <button class="modal-close">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-section-title">Сотрудник</div>
-        ${row('Имя', t.name)}${row('Отдел', t.dept)}${row('Должность', t.position)}
-        ${row('Мобильный', t.mobile)}${row('Рабочий', t.work_phone)}${row('Добавочный', t.ext)}
-        ${row('Компьютер', t.computer)}${row('Логин', t.login)}${row('E-Mail', t.email)}
-        <div class="modal-section-title" style="margin-top:12px">Заявка</div>
-        ${row('Категория', t.category)}${row('Устройство', t.device)}
-        <div class="modal-row"><span class="modal-label">Приоритет</span><span class="modal-val">${UI.prioBadge(t.priority)}</span></div>
-        <div class="modal-row"><span class="modal-label">Статус</span><span class="modal-val">${UI.statusBadge(t.status)}</span></div>
-        <div class="modal-row" style="flex-direction:column;gap:6px">
-          <span class="modal-label">Описание</span>
-          <div class="modal-desc">${UI.esc(t.description)}</div>
-        </div>
-      </div>
-      <div class="modal-foot" style="flex-direction:column">
-        <div class="status-btns">
-          ${statuses.map(x => `<button class="status-btn ${x.cls}${t.status === x.s ? ' active' : ''}" data-s="${UI.esc(x.s)}">${x.em} ${UI.esc(x.s)}</button>`).join('')}
-        </div>
-        <button class="btn btn-danger w-full" id="tkDel">🗑 Удалить заявку</button>
-      </div>`;
+    // Build modal HTML — description set via textContent after open (safe from injection)
+    const _e = UI.esc;
+    const statBtns = statuses.map(x =>
+      '<button class="status-btn ' + x.cls + (t.status === x.s ? ' active' : '') +
+      '" data-s="' + _e(x.s) + '">' + x.em + ' ' + _e(x.s) + '</button>'
+    ).join('');
 
-    UI.modal.open(html);
+    const html = '<div class="modal-head">' +
+      '<div><div class="modal-title">' + _e(t.id) + '</div>' +
+      '<div class="modal-sub">' + _e(t.created) + ' · ' + _e(t.name) + '</div></div>' +
+      '<button class="modal-close">✕</button></div>' +
+      '<div class="modal-body">' +
+        '<div class="modal-section-title">Сотрудник</div>' +
+        UI.modalRow('Имя', t.name) +
+        UI.modalRow('Отдел', t.dept) +
+        UI.modalRow('Должность', t.position) +
+        UI.modalRow('Мобильный', t.mobile) +
+        UI.modalRow('Добавочный', t.ext) +
+        UI.modalRow('Компьютер', t.computer) +
+        UI.modalRow('Логин', t.login) +
+        UI.modalRow('E-Mail', t.email) +
+        '<div class="modal-section-title" style="margin-top:12px">Заявка</div>' +
+        UI.modalRow('Категория', t.category) +
+        UI.modalRow('Устройство', t.device) +
+        '<div class="modal-row"><span class="modal-label">Приоритет</span><span class="modal-val">' + UI.prioBadge(t.priority) + '</span></div>' +
+        '<div class="modal-row"><span class="modal-label">Статус</span><span class="modal-val">' + UI.statusBadge(t.status) + '</span></div>' +
+        '<div class="modal-row" style="flex-direction:column;gap:6px">' +
+          '<span class="modal-label">Описание</span>' +
+          '<div class="modal-desc" id="tkDescEl"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="modal-foot" style="flex-direction:column">' +
+        '<div class="status-btns">' + statBtns + '</div>' +
+        '<button class="btn btn-danger w-full" id="tkDel">🗑 Удалить заявку</button>' +
+      '</div>';
+
+        let openOk = false;
+    try {
+      UI.modal.open(html);
+      openOk = true;
+    } catch(e) {
+      console.error('Modal open error:', e);
+      UI.toast('Ошибка открытия заявки: ' + e.message, 'error');
+      return;
+    }
+
+    // Set description safely via textContent — prevents any injection or template breaking
+    const descEl = UI.modal.el.querySelector('#tkDescEl');
+    if (descEl) descEl.textContent = t.description || '';
 
     UI.modal.el.querySelectorAll('.status-btn[data-s]').forEach(btn => {
       btn.addEventListener('click', () => {

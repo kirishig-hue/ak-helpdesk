@@ -186,8 +186,8 @@ const Employees = (() => {
     lines.push(`ORG;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:${qp(orgVal)}`);
     if (p.mobile)     lines.push(`TEL;TYPE=CELL:${p.mobile.replace(/[^\d+]/g,'')}`);
     if (p.work_phone) lines.push(`TEL;TYPE=WORK:${p.work_phone.replace(/[^\d+]/g,'')}`);
-    if (p.ext)        lines.push(`TEL;TYPE=WORK,x-extension:${p.ext}`);
-    if (p.email)      lines.push(`EMAIL;INTERNET:${p.email}`);
+    if (p.ext)        lines.push(`TEL;TYPE=WORK,x-extension:${UI.esc(p.ext)}`);
+    if (p.email)      lines.push(`EMAIL;INTERNET:${UI.esc(p.email)}`);
     lines.push('END:VCARD');
     return lines.join('\r\n');
   }

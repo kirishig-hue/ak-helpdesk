@@ -418,18 +418,26 @@ function renderMyTicketsList() {
 
 function openTicketDetail(t) {
   const statusMap = { 'Новая':'🔵 Новая', 'В работе':'🟡 В работе', 'Решено':'✅ Решено', 'Закрыта':'⬜ Закрыта' };
-  UI.sheet.open(`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-size:16px;font-weight:700">Заявка ${UI.esc(t.id)}</div>
-      <button onclick="document.getElementById('sheetOverlay').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--t3)">✕</button>
-    </div>
-    <div style="margin-bottom:14px">${UI.statusBadge(t.status)}</div>
-    ${UI.modalRow('Дата', t.created)}
-    ${UI.modalRow('Категория', t.category)}
-    ${UI.modalRow('Устройство', t.device)}
-    ${UI.modalRow('Приоритет', t.priority)}
-    <div style="margin-top:8px"><div class="modal-label">Описание</div><div class="modal-desc">${UI.esc(t.description)}</div></div>
-    <button class="submit-btn" style="margin-top:16px" onclick="document.getElementById('sheetOverlay').style.display='none'">Закрыть</button>`);
+  function _closeSheet() { document.getElementById('sheetOverlay').style.display='none'; }
+  const sheetHtml = (
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+    '<div style="font-size:16px;font-weight:700">Заявка ' + UI.esc(t.id) + '</div>' +
+    '<button onclick="_closeSheet()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--t3)">✕</button>' +
+    '</div>' +
+    '<div style="margin-bottom:14px">' + UI.statusBadge(t.status) + '</div>' +
+    UI.modalRow('Дата', t.created) +
+    UI.modalRow('Категория', t.category) +
+    UI.modalRow('Устройство', t.device) +
+    UI.modalRow('Приоритет', t.priority) +
+    '<div style="margin-top:8px"><div class="modal-label">Описание</div>' +
+    '<div class="modal-desc" id="sheetDescEl"></div></div>' +
+    '<button class="submit-btn" style="margin-top:16px" onclick="_closeSheet()">Закрыть</button>'
+  );
+  UI.sheet.open(sheetHtml);
+  const sheetDesc = document.getElementById('sheetDescEl');
+  if (sheetDesc) sheetDesc.textContent = t.description || '';
+  const _sdEl = document.getElementById('sheetDescEl');
+  if (_sdEl) _sdEl.textContent = t.description || '';
 }
 
 function duplicateTicket(t) {
