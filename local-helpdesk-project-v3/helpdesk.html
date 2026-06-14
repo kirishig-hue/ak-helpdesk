@@ -26,6 +26,7 @@
     <span class="sync-badge" id="syncBadge"><span class="sync-dot" id="syncDot"></span><span id="syncLabel">…</span></span>
     <button class="btn btn-ghost" id="btnRefresh">⟳</button>
     <button class="btn btn-ghost" id="btnCsv">↓</button>
+    <button class="btn btn-ghost" id="btnClearTickets" style="background:rgba(220,38,38,.25);color:#fff" title="Очистить журнал заявок">🗑</button>
   </div>
   <div class="hdr-tabs">
     <button class="btn btn-ghost active" id="tabTicketsBtn">📋 Заявки</button>
@@ -243,6 +244,7 @@ document.getElementById('btnRefresh').addEventListener('click', () => {
   else renderAll();
 });
 (function(){var _el=document.getElementById('btnCsv');if(_el)_el.addEventListener('click',Tickets.exportCsv);})();
+(function(){var _el=document.getElementById('btnClearTickets');if(_el)_el.addEventListener('click',function(){if(!confirm('Очистить все заявки? Это действие нельзя отменить.'))return;Storage.tickets.save([]);renderAll();UI.toast('Журнал заявок очищен');});})();
 (function(){var _el=document.getElementById('btnCartCsv');if(_el)_el.addEventListener('click',Cartridges.exportStockCsv);})();
 (function(){var _el=document.getElementById('btnExportDevices');if(_el)_el.addEventListener('click',Devices.exportCsv);})();
 
