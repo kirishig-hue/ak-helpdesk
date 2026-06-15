@@ -313,7 +313,7 @@
   },
   {
     "id": 28,
-    "location": "Слад 1й этаж",
+    "location": "Склад 1й этаж",
     "cabinet": "",
     "owner": "",
     "brand": "Canon",
@@ -384,7 +384,7 @@
     "status": "OK"
   },
   {
-    "id": 33,
+    "id": 34,
     "location": "Скворечник",
     "cabinet": "",
     "owner": "Джавохир Худайбергенов",
@@ -447,7 +447,7 @@
     "id": 40,
     "location": "ЭваПора",
     "cabinet": "",
-    "owner": "Сергей ⁠Цветков",
+    "owner": "Сергей Цветков",
     "brand": "Epson",
     "model": "EcoTank L4160",
     "type": "Струйное МФУ (цвет)",

@@ -144,14 +144,18 @@ const Cartridges = (() => {
     const q = (searchQ || '').toLowerCase();
 
     // Build unique articles from printers
+    const THERMAL_BRANDS = ['Zebra','Зебра','SATO','Honeywell','CST','Mertech','Мертех'];
     const articleMap = {};
+    const thermalMap = {};
     App.state.printers.forEach(pr => {
       const art = (pr.cartridge || '').trim();
       if (!art || art === '—') return;
-      if (!articleMap[art]) {
-        articleMap[art] = { article: art, printers: [], cnt: Storage.cart.getByArticle(art) };
+      const isThermal = THERMAL_BRANDS.includes(pr.brand);
+      const map = isThermal ? thermalMap : articleMap;
+      if (!map[art]) {
+        map[art] = { article: art, printers: [], cnt: Storage.cart.getByArticle(art) };
       }
-      articleMap[art].printers.push(pr);
+      map[art].printers.push(pr);
     });
 
     let rows = Object.values(articleMap).filter(row => {
@@ -204,6 +208,74 @@ const Cartridges = (() => {
         if (el) el.innerHTML = UI.stockHTML(Storage.cart.getByArticle(art));
       });
     });
+
+    // ── Термопринтеры — раскрывающийся блок ──────────────────────────────────
+    const thermalRows = Object.values(thermalMap).filter(row => {
+      const cnt = row.cnt;
+      if (filter === 'low'  && !(cnt !== null && cnt > 0 && cnt <= 2)) return false;
+      if (filter === 'zero' && cnt !== 0)   return false;
+      if (filter === 'unk'  && cnt !== null) return false;
+      if (q) return row.article.toLowerCase().includes(q) ||
+        row.printers.some(p => (p.model||'').toLowerCase().includes(q) || (p.owner||'').toLowerCase().includes(q));
+      return true;
+    });
+
+    // Remove old thermal toggle if exists
+    const oldToggle = document.getElementById('thermalToggleRow');
+    if (oldToggle) oldToggle.remove();
+
+    if (thermalRows.length > 0) {
+      const toggleRow = document.createElement('tr');
+      toggleRow.id = 'thermalToggleRow';
+      toggleRow.innerHTML = '<td colspan="6" style="padding:0">' +
+        '<button id="btnThermalToggle" style="width:100%;padding:8px 12px;background:#F8F9FB;border:none;border-top:1px solid var(--bd);cursor:pointer;font-size:12px;font-weight:600;color:var(--t2);text-align:left;font-family:var(--font)">' +
+        '🏷️ Термопринтеры (' + thermalRows.length + ')  ▼' +
+        '</button></td>';
+      tbody.appendChild(toggleRow);
+
+      const thermalHtml = thermalRows.map(row => {
+        const cnt   = row.cnt;
+        const tod   = Storage.replacements.todayByArticle(row.article);
+        const tot   = Storage.replacements.totalByArticle(row.article);
+        const names = [...new Set(row.printers.map(p => p.brand + ' ' + p.model))].join(', ');
+        const owners = [...new Set(row.printers.map(p => p.owner).filter(Boolean))].join(', ');
+        return '<tr class="thermal-row" style="display:none">' +
+          '<td style="font-size:12px;font-weight:600;color:var(--t2)">' + UI.esc(row.article) + '</td>' +
+          '<td style="font-size:12px;color:var(--t2)">' + UI.esc(names) + '<div class="td-sub">' + row.printers.length + ' принт.</div></td>' +
+          '<td style="font-size:12px;color:var(--t2)">' + UI.esc(owners||'—') + '</td>' +
+          '<td style="text-align:center"><div style="display:flex;align-items:center;justify-content:center;gap:5px">' +
+          '<button class="adj-btn" data-art="' + UI.esc(row.article) + '" data-d="-1">−</button>' +
+          '<span id="hcc_' + UI.esc(row.article) + '">' + UI.stockHTML(cnt) + '</span>' +
+          '<button class="adj-btn" data-art="' + UI.esc(row.article) + '" data-d="1">+</button>' +
+          '</div></td>' +
+          '<td style="text-align:center;font-weight:600;color:' + (tod?'var(--accent)':'var(--t3)') + '">' + (tod||'—') + '</td>' +
+          '<td style="text-align:center;color:var(--t2)">' + (tot||'—') + '</td>' +
+          '</tr>';
+      }).join('');
+
+      const thermalContainer = document.createElement('tbody');
+      thermalContainer.id = 'thermalTbody';
+      thermalContainer.innerHTML = thermalHtml;
+      tbody.parentNode.appendChild(thermalContainer);
+
+      // Wire toggle
+      document.getElementById('btnThermalToggle').addEventListener('click', function() {
+        const rows = document.querySelectorAll('.thermal-row');
+        const open = rows[0] && rows[0].style.display !== 'none';
+        rows.forEach(r => r.style.display = open ? 'none' : '');
+        this.textContent = '🏷️ Термопринтеры (' + thermalRows.length + ')  ' + (open ? '▼' : '▲');
+      });
+
+      // Wire adj-btns for thermal rows
+      thermalContainer.querySelectorAll('.adj-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const art = btn.dataset.art;
+          Storage.cart.adjustByArticle(art, +btn.dataset.d);
+          const el = document.getElementById('hcc_' + art);
+          if (el) el.innerHTML = UI.stockHTML(Storage.cart.getByArticle(art));
+        });
+      });
+    }
   }
 
   // ── Replacements log ──────────────────────────────────────────────────────────
