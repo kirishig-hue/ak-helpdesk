@@ -15,7 +15,7 @@ const Storage = (() => {
   let _cache = null;
 
   function _default() {
-    return { tickets: [], cartstock: {}, replacements: [], overrides: {}, devices: {}, stockSeeded: false };
+    return { tickets: [], cartstock: {}, replacements: [], overrides: {}, devices: {}, printers: [], stockSeeded: false };
   }
   function _fromLocal() {
     try { return JSON.parse(localStorage.getItem('hd_data') || 'null') || _default(); }
@@ -287,7 +287,15 @@ const Storage = (() => {
   }
   function set(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
 
-  return { init, isConfigured, onSync, pull: _pull, tickets, cart, replacements, overrides, devices, get, set };
+  function _savePrinters(arr) {
+    if (!_cache) return;
+    _cache.printers = arr;
+    return _push();
+  }
+  function _loadPrinters() {
+    return (_cache && _cache.printers && _cache.printers.length > 0) ? _cache.printers : null;
+  }
+  return { init, isConfigured, onSync, pull: _pull, push: _push, savePrinters: _savePrinters, loadPrinters: _loadPrinters, tickets, cart, replacements, overrides, devices, get, set };
 })();
 
 window.Storage = Storage;

@@ -82,6 +82,16 @@
 
 <!-- CART TAB -->
 <div class="tab-pane" id="paneCart">
+  <!-- Sub-tabs -->
+  <div style="display:flex;gap:0;border-bottom:2px solid var(--bd);background:var(--sf);padding:0 16px">
+    <button class="cart-sub-btn active" id="subCartStock" style="padding:10px 16px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;font-family:var(--font)">🖊 Картриджи</button>
+    <button class="cart-sub-btn" id="subCartPrinters" style="padding:10px 16px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--t3);border-bottom:2px solid transparent;margin-bottom:-2px;font-family:var(--font)">🖨 Принтеры</button>
+    <button class="cart-sub-btn" id="subCartOwners" style="padding:10px 16px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--t3);border-bottom:2px solid transparent;margin-bottom:-2px;font-family:var(--font)">👤 Ответственные</button>
+  </div>
+
+  <!-- SUB-PANE: Картриджи (склад) -->
+  <div id="subPaneStock">
+
   <div class="stats-row" id="cartStatsRow"></div>
   <div class="toolbar cart-toolbar">
     <div class="search-wrap">
@@ -125,6 +135,54 @@
       <p>Замен ещё не было</p>
     </div>
     </div><!-- /repSection -->
+  </div>
+</
+  </div>
+
+  <!-- SUB-PANE: Принтеры -->
+  <div id="subPanePrinters" style="display:none">
+    <div class="toolbar cart-toolbar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M15 15l-3.5-3.5"/></svg>
+        <input class="search-input" id="printerSearch" placeholder="Поиск принтера…" autocomplete="off">
+      </div>
+      <select class="search-input" id="printerBrandFilter" style="padding-left:10px;max-width:160px">
+        <option value="all">Все бренды</option>
+      </select>
+      <button class="btn btn-primary btn-sm" id="btnAddPrinter">+ Добавить</button>
+      <button class="btn btn-secondary btn-sm" id="btnSavePrinters">☁️ Сохранить</button>
+    </div>
+    <div class="table-wrap">
+      <table class="table" id="tblPrinters">
+        <thead><tr>
+          <th>#</th><th>Бренд / Модель</th><th>Расположение</th><th>Кабинет</th>
+          <th>Картридж</th><th>Серийный №</th><th>Статус</th><th></th>
+        </tr></thead>
+        <tbody id="tbodyPrinters"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SUB-PANE: Ответственные -->
+  <div id="subPaneOwners" style="display:none">
+    <div class="toolbar cart-toolbar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M15 15l-3.5-3.5"/></svg>
+        <input class="search-input" id="ownerSearch" placeholder="Поиск по сотруднику или принтеру…" autocomplete="off">
+      </div>
+      <select class="search-input" id="ownerBrandFilter" style="padding-left:10px;max-width:160px">
+        <option value="all">Все бренды</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" id="btnSaveOwners">☁️ Сохранить</button>
+    </div>
+    <div class="table-wrap">
+      <table class="table" id="tblOwners">
+        <thead><tr>
+          <th>#</th><th>Принтер</th><th>Расположение</th><th>Владелец</th><th>Картридж</th><th></th>
+        </tr></thead>
+        <tbody id="tbodyOwners"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -206,9 +264,15 @@ function updateSyncBadge(state) {
 updateSyncBadge(Storage.isConfigured() ? 'ok' : 'err');
 Storage.onSync(state => {
   updateSyncBadge(state);
-  if (curTab==='cart') renderCart();
-  else if (curTab==='devices') renderDevicesTab();
-  else renderAll();
+  if (curTab==='cart') {
+    renderCart();
+    if (cartSubTab === 'Printers') renderPrintersTab();
+    if (cartSubTab === 'Owners')   renderOwnersTab();
+  } else if (curTab==='devices') {
+    renderDevicesTab();
+  } else {
+    renderAll();
+  }
 });
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
@@ -230,8 +294,11 @@ function switchTab(tab) {
   const btn = document.getElementById(btnMap[tab]);
   if (btn) btn.classList.add('active');
 
-  if (tab==='cart') renderCart();
-  else if (tab==='devices') renderDevicesTab();
+  if (tab==='cart') {
+    renderCart();
+    if (cartSubTab==='Printers') renderPrintersTab();
+    if (cartSubTab==='Owners')   renderOwnersTab();
+  } else if (tab==='devices') { renderDevicesTab(); }
   else renderAll();
 }
 
@@ -269,6 +336,239 @@ function renderAll() {
 UI.wireFilterGroup('filterBtns', s => { Tickets.setFilter(s); renderAll(); });
 document.getElementById('hdSearch').addEventListener('input', function() { Tickets.setSearch(this.value); renderAll(); });
 UI.wireSortHeaders('tblTickets', (c,d) => { Tickets.setSort(c,d); renderAll(); });
+
+// ── Cart sub-tabs ────────────────────────────────────────────────────────────
+let cartSubTab = 'stock';
+let printerSearch = '', printerBrand = 'all', ownerSearch = '', ownerBrand = 'all';
+
+function switchCartSub(sub) {
+  cartSubTab = sub;
+  ['stock','Printers','Owners'].forEach(s => {
+    const pane = document.getElementById('subPane' + (s === 'stock' ? 'Stock' : s));
+    if (pane) pane.style.display = s === sub || (s === 'stock' && sub === 'stock') ? 'block' : 'none';
+  });
+  document.querySelectorAll('.cart-sub-btn').forEach(b => {
+    const active = b.id === 'subCart' + (sub === 'stock' ? 'Stock' : sub.charAt(0).toUpperCase() + sub.slice(1));
+    b.style.color = active ? 'var(--accent)' : 'var(--t3)';
+    b.style.borderBottomColor = active ? 'var(--accent)' : 'transparent';
+  });
+  if (sub === 'stock')    renderCart();
+  if (sub === 'Printers') renderPrintersTab();
+  if (sub === 'Owners')   renderOwnersTab();
+}
+
+(function() {
+  const s = document.getElementById('subCartStock');
+  const p = document.getElementById('subCartPrinters');
+  const o = document.getElementById('subCartOwners');
+  if (s) s.addEventListener('click', () => switchCartSub('stock'));
+  if (p) p.addEventListener('click', () => switchCartSub('Printers'));
+  if (o) o.addEventListener('click', () => switchCartSub('Owners'));
+})();
+
+// ── Printers sub-tab ──────────────────────────────────────────────────────────
+function renderPrintersTab() {
+  const printers = (App && App.state && App.state.printers) ? App.state.printers : [];
+  if (!printers.length) {
+    const tb = document.getElementById('tbodyPrinters');
+    if (tb) tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--t3)">Загрузка данных…</td></tr>';
+    return;
+  }
+  // Populate brand filter
+  const sel = document.getElementById('printerBrandFilter');
+  if (sel && sel.options.length <= 1) {
+    const brands = [...new Set(printers.map(p => p.brand).filter(Boolean))].sort();
+    brands.forEach(b => { const o = document.createElement('option'); o.value = b; o.textContent = b; sel.appendChild(o); });
+  }
+  const q = printerSearch.toLowerCase();
+  const rows = printers.filter(p => {
+    if (printerBrand !== 'all' && p.brand !== printerBrand) return false;
+    if (q) return ['brand','model','location','owner','serial','cartridge'].some(k => (p[k]||'').toLowerCase().includes(q));
+    return true;
+  });
+  document.getElementById('tbodyPrinters').innerHTML = rows.map(p =>
+    '<tr>' +
+    '<td class="mono text-muted">' + p.id + '</td>' +
+    '<td><div class="td-name">' + UI.esc(p.brand) + ' ' + UI.esc(p.model) + '</div>' +
+      '<div class="td-sub">' + UI.esc(p.type||'') + '</div></td>' +
+    '<td style="font-size:12px">' + UI.esc(p.location||'—') + '</td>' +
+    '<td style="font-size:12px">' + UI.esc(p.cabinet||'—') + '</td>' +
+    '<td style="font-size:11px;color:var(--accent)">' + UI.esc(p.cartridge||'—') + (p.cartridge2 ? '<br><span style="color:#059669">+ ' + UI.esc(p.cartridge2) + '</span>' : '') + '</td>' +
+    '<td class="mono" style="font-size:11px;color:var(--t3)">' + UI.esc(p.serial||'—') + '</td>' +
+    '<td style="font-size:11px">' + UI.esc(p.status||'OK') + '</td>' +
+    '<td><button class="btn btn-secondary btn-sm" data-pid="' + p.id + '" onclick="openPrinterModal(' + p.id + ')">✏️</button></td>' +
+    '</tr>'
+  ).join('');
+}
+
+(function(){
+  const s = document.getElementById('printerSearch');
+  const b = document.getElementById('printerBrandFilter');
+  if (s) s.addEventListener('input', function(){ printerSearch=this.value; renderPrintersTab(); });
+  if (b) b.addEventListener('change', function(){ printerBrand=this.value; renderPrintersTab(); });
+})();
+
+function openPrinterModal(pid) {
+  const p = App.state.printers.find(x => x.id === pid);
+  if (!p) return;
+  const html =
+    '<div class="modal-head"><div><div class="modal-title">✏️ Редактировать принтер</div>' +
+    '<div class="modal-sub">#' + p.id + ' ' + UI.esc(p.brand) + ' ' + UI.esc(p.model) + '</div></div>' +
+    '<button class="modal-close">✕</button></div>' +
+    '<div class="modal-body">' +
+      _pField('Бренд',        'pe_brand',    p.brand) +
+      _pField('Модель',       'pe_model',    p.model) +
+      _pField('Тип',          'pe_type',     p.type) +
+      _pField('Расположение', 'pe_location', p.location) +
+      _pField('Кабинет',      'pe_cabinet',  p.cabinet) +
+      _pField('Картридж 1',   'pe_cart',     p.cartridge) +
+      _pField('Картридж 2',   'pe_cart2',    p.cartridge2||'') +
+      _pField('Серийный №',   'pe_serial',   p.serial, true) +
+    '</div>' +
+    '<div class="modal-foot">' +
+      '<button class="btn btn-primary" id="peSave" style="flex:1">✅ Сохранить</button>' +
+      '<button class="btn btn-secondary" id="peCancel">Отмена</button>' +
+    '</div>';
+  UI.modal.open(html);
+  document.getElementById('peCancel').addEventListener('click', () => UI.modal.close());
+  document.getElementById('peSave').addEventListener('click', () => {
+    p.brand    = document.getElementById('pe_brand').value.trim();
+    p.model    = document.getElementById('pe_model').value.trim();
+    p.type     = document.getElementById('pe_type').value.trim();
+    p.location = document.getElementById('pe_location').value.trim();
+    p.cabinet  = document.getElementById('pe_cabinet').value.trim();
+    p.cartridge  = document.getElementById('pe_cart').value.trim();
+    p.cartridge2 = document.getElementById('pe_cart2').value.trim() || undefined;
+    p.serial   = document.getElementById('pe_serial').value.trim();
+    UI.modal.close();
+    renderPrintersTab();
+    if (cartSubTab === 'stock') renderCart();
+    UI.toast('Принтер обновлён (до перезагрузки)');
+  });
+}
+function _pField(label, id, val, mono) {
+  return '<div class="form-group"><label class="form-label">' + label + '</label>' +
+    '<input class="form-input' + (mono?' mono':'') + '" id="' + id + '" value="' + UI.esc(val||'') + '"></div>';
+}
+
+// ── Owners sub-tab ────────────────────────────────────────────────────────────
+function renderOwnersTab() {
+  const printers = (App && App.state && App.state.printers) ? App.state.printers : [];
+  if (!printers.length) {
+    const tb = document.getElementById('tbodyOwners');
+    if (tb) tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--t3)">Загрузка данных…</td></tr>';
+    return;
+  }
+  // Populate brand filter
+  const sel = document.getElementById('ownerBrandFilter');
+  if (sel && sel.options.length <= 1) {
+    const brands = [...new Set(printers.map(p => p.brand).filter(Boolean))].sort();
+    brands.forEach(b => { const o = document.createElement('option'); o.value = b; o.textContent = b; sel.appendChild(o); });
+  }
+  const q = ownerSearch.toLowerCase();
+  const rows = printers.filter(p => {
+    if (ownerBrand !== 'all' && p.brand !== ownerBrand) return false;
+    if (q) return (p.owner||'').toLowerCase().includes(q) || (p.model||'').toLowerCase().includes(q) || (p.location||'').toLowerCase().includes(q);
+    return true;
+  });
+  document.getElementById('tbodyOwners').innerHTML = rows.map(p =>
+    '<tr>' +
+    '<td class="mono text-muted">' + p.id + '</td>' +
+    '<td><div class="td-name">' + UI.esc(p.brand) + ' ' + UI.esc(p.model) + '</div>' +
+      '<div class="td-sub">' + UI.esc(p.type||'') + '</div></td>' +
+    '<td style="font-size:12px">' + UI.esc(p.location||'—') + (p.cabinet ? ' · ' + UI.esc(p.cabinet) : '') + '</td>' +
+    '<td style="font-size:13px;font-weight:500">' + UI.esc((p.owner||'').replace(/\n/g,', ')||'—') + '</td>' +
+    '<td style="font-size:11px;color:var(--accent)">' + UI.esc(p.cartridge||'—') + '</td>' +
+    '<td><button class="btn btn-secondary btn-sm" onclick="openOwnerModal(' + p.id + ')">✏️</button></td>' +
+    '</tr>'
+  ).join('');
+}
+
+(function(){
+  const s = document.getElementById('ownerSearch');
+  const b = document.getElementById('ownerBrandFilter');
+  if (s) s.addEventListener('input', function(){ ownerSearch=this.value; renderOwnersTab(); });
+  if (b) b.addEventListener('change', function(){ ownerBrand=this.value; renderOwnersTab(); });
+})();
+
+function openOwnerModal(pid) {
+  const p = App.state.printers.find(x => x.id === pid);
+  if (!p) return;
+  const html =
+    '<div class="modal-head"><div><div class="modal-title">👤 Ответственный</div>' +
+    '<div class="modal-sub">#' + p.id + ' ' + UI.esc(p.brand) + ' ' + UI.esc(p.model) + ' · ' + UI.esc(p.location||'') + '</div></div>' +
+    '<button class="modal-close">✕</button></div>' +
+    '<div class="modal-body">' +
+      '<div class="form-group">' +
+        '<label class="form-label">Владелец(ы)</label>' +
+        '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">Несколько — через запятую или с новой строки</div>' +
+        '<textarea class="form-input" id="oe_owner" rows="3">' + UI.esc(p.owner||'') + '</textarea>' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label class="form-label">Поиск сотрудника</label>' +
+        '<input class="form-input" id="oe_search" placeholder="Начните вводить имя…" autocomplete="off">' +
+        '<div id="oe_results" style="max-height:180px;overflow-y:auto;border:1px solid var(--bd);border-radius:8px;margin-top:4px;display:none"></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="modal-foot">' +
+      '<button class="btn btn-primary" id="oeSave" style="flex:1">✅ Сохранить</button>' +
+      '<button class="btn btn-secondary" id="oeCancel">Отмена</button>' +
+    '</div>';
+  UI.modal.open(html);
+
+  // Employee search
+  document.getElementById('oe_search').addEventListener('input', function() {
+    const hits = Employees.search(this.value, App.state.employees).slice(0, 8);
+    const res = document.getElementById('oe_results');
+    if (!hits.length) { res.style.display = 'none'; return; }
+    res.innerHTML = hits.map(e =>
+      '<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--bd);font-size:13px" data-name="' + UI.esc(e.name) + '">' +
+      '<b>' + UI.esc(e.name) + '</b><span style="color:var(--t3);font-size:11px;margin-left:6px">' + UI.esc(e.dept||'') + '</span></div>'
+    ).join('');
+    res.style.display = 'block';
+    res.querySelectorAll('[data-name]').forEach(el => {
+      el.addEventListener('click', () => {
+        const ta = document.getElementById('oe_owner');
+        const cur = ta.value.trim();
+        ta.value = cur ? cur + ', ' + el.dataset.name : el.dataset.name;
+        res.style.display = 'none';
+        document.getElementById('oe_search').value = '';
+      });
+    });
+  });
+
+  document.getElementById('oeCancel').addEventListener('click', () => UI.modal.close());
+  document.getElementById('oeSave').addEventListener('click', () => {
+    p.owner = document.getElementById('oe_owner').value.trim();
+    UI.modal.close();
+    renderOwnersTab();
+    UI.toast('Ответственный обновлён (до перезагрузки)');
+  });
+}
+
+// ── Save printers to cloud ────────────────────────────────────────────────────
+async function savePrintersToCloud(btn) {
+  if (!Storage.isConfigured()) {
+    UI.toast('Синхронизация не настроена'); return;
+  }
+  const orig = btn.textContent;
+  btn.textContent = '⏳ Сохранение…'; btn.disabled = true;
+  try {
+    await Storage.savePrinters(App.state.printers);
+    UI.toast('✅ Принтеры сохранены в облако');
+  } catch(e) {
+    UI.toast('❌ Ошибка: ' + e.message);
+  } finally {
+    btn.textContent = orig; btn.disabled = false;
+  }
+}
+
+(function(){
+  const bp = document.getElementById('btnSavePrinters');
+  const bo = document.getElementById('btnSaveOwners');
+  if (bp) bp.addEventListener('click', function(){ savePrintersToCloud(this); });
+  if (bo) bo.addEventListener('click', function(){ savePrintersToCloud(this); });
+})();
 
 // ── Cart tab ──────────────────────────────────────────────────────────────────
 function renderCart() {

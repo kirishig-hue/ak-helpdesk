@@ -32,6 +32,11 @@ const App = (() => {
 
     // Init storage (pulls from JSONBin if configured)
     await Storage.init();
+    // Override printers with cloud version if saved
+    const cloudPrinters = Storage.loadPrinters ? Storage.loadPrinters() : null;
+    if (cloudPrinters && cloudPrinters.length > 0) {
+      state.printers = cloudPrinters;
+    }
 
     // Seed cartridge stock by article (one shared counter per cartridge model)
     const stockSeedByArticle = {"Canon 054H / CS-C054H":1,"Canon 737 / CS-CF283X":7,"Canon EP-703 / CS-EP703":0,"Canon FX-10 / CS-FX10-MPS":9,"Epson 101 / CS-EPT03V14A":1,"Epson 103 / CS-EPT03V":1,"HP 207X / CS-W222xX":0,"HP 26X / CS-CF226X":3,"HP 30X / CS-CF230X":0,"HP 55X / CS-CE255XS":1,"HP 81X / CS-CF281X":12,"HP 83X / CS-CF283X-MPSXL":7,"TK-1150 / CS-TK1150-MPS":4,"TK-1270 / N-TK-1270":1,"TK-3430 / CS-TK3430":12,"TNP-75/76 / CET TNP75/76":2,"Драм IUP-34":3,"Риббон + термоэтикетка":0,"Термолента / риббон + термоэтикетка":0,"Термолента / термоэтикетка":0,"CS-CE278X-MPS":0,"CS-C070H":0,"CS-CE505XS":0};    Storage.cart.seedOnce(stockSeedByArticle);
