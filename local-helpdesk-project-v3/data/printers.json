@@ -464,8 +464,10 @@
     "model": "bizhub 5000i",
     "type": "МФУ A3 (печать/скан/копир/факс)",
     "serial": "ACF1021049185",
-    "cartridge": "TNP-75/76 / CET TNP75/76 + Драм IUP-34",
-    "status": "OK"
+    "cartridge": "TNP-75/76 / CET TNP75/76",
+    "status": "OK",
+    "drum": "Драм IUP-34",
+    "cartridge2": "Драм IUP-34"
   },
   {
     "id": 42,
@@ -476,8 +478,10 @@
     "model": "bizhub 5000i",
     "type": "МФУ A3 (печать/скан/копир/факс)",
     "serial": "ACF1021043280",
-    "cartridge": "TNP-75/76 / CET TNP75/76 + Драм IUP-34",
-    "status": "OK"
+    "cartridge": "TNP-75/76 / CET TNP75/76",
+    "status": "OK",
+    "drum": "Драм IUP-34",
+    "cartridge2": "Драм IUP-34"
   },
   {
     "id": 43,

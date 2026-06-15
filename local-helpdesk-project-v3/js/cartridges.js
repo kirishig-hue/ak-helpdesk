@@ -25,7 +25,16 @@ const Cartridges = (() => {
     const card = document.createElement('div');
     card.style.cssText = 'border:1.5px solid var(--bd);border-radius:var(--r);overflow:hidden';
 
+    // Expand printers with cartridge2 into separate entries
+    const expanded = [];
     printers.forEach(pr => {
+      expanded.push(pr);
+      if (pr.cartridge2) {
+        expanded.push({ ...pr, cartridge: pr.cartridge2, _secondary: true });
+      }
+    });
+
+    expanded.forEach(pr => {
       const isLabel = ['Zebra','SATO','Honeywell','CST','Mertech'].includes(pr.brand);
       const lbl = isLabel ? 'Риббон/лента' : 'Картридж';
       const item = document.createElement('div');
@@ -148,14 +157,20 @@ const Cartridges = (() => {
     const articleMap = {};
     const thermalMap = {};
     App.state.printers.forEach(pr => {
-      const art = (pr.cartridge || '').trim();
-      if (!art || art === '—') return;
       const isThermal = THERMAL_BRANDS.includes(pr.brand);
       const map = isThermal ? thermalMap : articleMap;
-      if (!map[art]) {
-        map[art] = { article: art, printers: [], cnt: Storage.cart.getByArticle(art) };
+      // Primary cartridge
+      const art = (pr.cartridge || '').trim();
+      if (art && art !== '—') {
+        if (!map[art]) map[art] = { article: art, printers: [], cnt: Storage.cart.getByArticle(art) };
+        map[art].printers.push(pr);
       }
-      map[art].printers.push(pr);
+      // Secondary cartridge (e.g. drum unit)
+      const art2 = (pr.cartridge2 || '').trim();
+      if (art2 && art2 !== '—') {
+        if (!map[art2]) map[art2] = { article: art2, printers: [], cnt: Storage.cart.getByArticle(art2) };
+        if (!map[art2].printers.find(x => x.id === pr.id)) map[art2].printers.push(pr);
+      }
     });
 
     let rows = Object.values(articleMap).filter(row => {

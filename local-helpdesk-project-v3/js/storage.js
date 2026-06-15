@@ -208,6 +208,12 @@ const Storage = (() => {
       _data().stockSeeded = true;
       _save();
     },
+    seedArticle(art, qty = 0) {
+      // Add single article if not yet in stock (for cartridge2)
+      if (!art) return;
+      const s = cart._s();
+      if (s[art] === undefined) { s[art] = qty; _save(); }
+    },
   };
 
   // ── Replacements ──────────────────────────────────────────────────────────────
