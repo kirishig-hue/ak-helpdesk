@@ -674,29 +674,5 @@
     "serial": "LXP70393",
     "cartridge": "Canon FX-10 / CS-FX10-MPS",
     "status": "OK"
-  },
-  {
-    "id": 13,
-    "location": "Хостел",
-    "cabinet": "306",
-    "owner": "",
-    "brand": "Canon",
-    "model": "i-SENSYS MF4018",
-    "type": "МФУ A4",
-    "serial": "GKD26940",
-    "cartridge": "Canon FX-10 / CS-FX10-MPS",
-    "status": "OK"
-  },
-  {
-    "id": 14,
-    "location": "Хостел",
-    "cabinet": "306",
-    "owner": "",
-    "brand": "Canon",
-    "model": "i-SENSYS MF4018",
-    "type": "МФУ A4",
-    "serial": "LXP70396",
-    "cartridge": "Canon FX-10 / CS-FX10-MPS",
-    "status": "Не исправен"
   }
 ]

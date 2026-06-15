@@ -68,7 +68,9 @@ const Tickets = (() => {
     ).join('');
 
     tbody.querySelectorAll('tr').forEach(tr => {
-      tr.addEventListener('click', () => {
+      tr.addEventListener('click', (e) => {
+        // Don't open modal if click originated from a button/link inside the row
+        if (e.target.closest('button, a, input, select')) return;
         const t = Storage.tickets.find(tr.dataset.id);
         if (t && onRowClick) onRowClick(t);
       });

@@ -6,8 +6,8 @@
 <title>IT Helpdesk — АК-Сервис</title>
 <link rel="stylesheet" href="css/main.css">
 <style>
-.tab-pane{display:none}
-.tab-pane.active{display:block}
+.tab-pane{display:none;pointer-events:none}
+.tab-pane.active{display:block;pointer-events:all}
 /* Cart tab toolbar stacked on mobile */
 @media(max-width:599px){
   .cart-toolbar{flex-direction:column}
@@ -234,12 +234,16 @@
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let curTab = 'tickets', fStatus = 'all', fSearch = '', sortC = 'ts', sortD = -1;
+let _lastTabSwitch = 0;
 let cartSrch = '', cartFil = 'all', devSearch = '', devTypeFil = 'all';
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 UI.modal.init();
 
 App.loadData().then(() => { Storage.init();
+  // Re-render active sub-tabs now that data is loaded
+  if (cartSubTab === 'Printers') renderPrintersTab();
+  if (cartSubTab === 'Owners')   renderOwnersTab();
   // Populate device type filter
   const sel = document.getElementById('devTypeFilter');
   Devices.TYPES.forEach(t => {
@@ -278,6 +282,7 @@ Storage.onSync(state => {
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function switchTab(tab) {
   curTab = tab;
+  _lastTabSwitch = Date.now();
   ['paneTickets','paneCart','paneDevices'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('active');
@@ -328,7 +333,7 @@ function renderAll() {
     UI.statCard(d,'Решено','var(--gn)');
   Tickets.renderTable({
     tbodyId:'tbodyTickets', emptyId:'emptyTickets', tableId:'tblTickets',
-    onRowClick: t => { if (curTab === 'tickets') Tickets.openDetailModal(t, renderAll, renderAll); },
+    onRowClick: t => { if (curTab === 'tickets' && Date.now() - _lastTabSwitch > 300) Tickets.openDetailModal(t, renderAll, renderAll); },
   });
   Tickets.updateFilterCounts('filterBtns');
 }
@@ -353,18 +358,25 @@ function switchCartSub(sub) {
     b.style.borderBottomColor = active ? 'var(--accent)' : 'transparent';
   });
   if (sub === 'stock')    renderCart();
-  if (sub === 'Printers') renderPrintersTab();
-  if (sub === 'Owners')   renderOwnersTab();
+  if (sub === 'Printers') {
+    renderPrintersTab();
+    // Retry after 500ms if data wasn't ready yet
+    if (!App.state.printers.length) setTimeout(renderPrintersTab, 500);
+  }
+  if (sub === 'Owners') {
+    renderOwnersTab();
+    if (!App.state.printers.length) setTimeout(renderOwnersTab, 500);
+  }
 }
 
-(function() {
+try {
   const s = document.getElementById('subCartStock');
   const p = document.getElementById('subCartPrinters');
   const o = document.getElementById('subCartOwners');
   if (s) s.addEventListener('click', () => switchCartSub('stock'));
   if (p) p.addEventListener('click', () => switchCartSub('Printers'));
   if (o) o.addEventListener('click', () => switchCartSub('Owners'));
-})();
+} catch(e) { console.error('subTab wiring error:', e); }
 
 // ── Printers sub-tab ──────────────────────────────────────────────────────────
 function renderPrintersTab() {
@@ -401,12 +413,12 @@ function renderPrintersTab() {
   ).join('');
 }
 
-(function(){
+try {
   const s = document.getElementById('printerSearch');
   const b = document.getElementById('printerBrandFilter');
   if (s) s.addEventListener('input', function(){ printerSearch=this.value; renderPrintersTab(); });
   if (b) b.addEventListener('change', function(){ printerBrand=this.value; renderPrintersTab(); });
-})();
+} catch(e) { console.error('printerSearch wiring error:', e); }
 
 function openPrinterModal(pid) {
   const p = App.state.printers.find(x => x.id === pid);
@@ -484,12 +496,12 @@ function renderOwnersTab() {
   ).join('');
 }
 
-(function(){
+try {
   const s = document.getElementById('ownerSearch');
   const b = document.getElementById('ownerBrandFilter');
   if (s) s.addEventListener('input', function(){ ownerSearch=this.value; renderOwnersTab(); });
   if (b) b.addEventListener('change', function(){ ownerBrand=this.value; renderOwnersTab(); });
-})();
+} catch(e) { console.error('ownerSearch wiring error:', e); }
 
 function openOwnerModal(pid) {
   const p = App.state.printers.find(x => x.id === pid);
@@ -563,12 +575,12 @@ async function savePrintersToCloud(btn) {
   }
 }
 
-(function(){
+try {
   const bp = document.getElementById('btnSavePrinters');
   const bo = document.getElementById('btnSaveOwners');
   if (bp) bp.addEventListener('click', function(){ savePrintersToCloud(this); });
   if (bo) bo.addEventListener('click', function(){ savePrintersToCloud(this); });
-})();
+} catch(e) { console.error('savePrinters wiring error:', e); }
 
 // ── Cart tab ──────────────────────────────────────────────────────────────────
 function renderCart() {
