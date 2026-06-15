@@ -236,7 +236,7 @@
     "model": "i-SENSYS MF4870dn",
     "type": "МФУ A4 (факс)",
     "serial": "NUA14285",
-    "cartridge": "Canon FX-10 / CS-FX10-MPS",
+    "cartridge": "CS-CE278X-MPS",
     "status": ""
   },
   {
@@ -260,7 +260,7 @@
     "model": "i-SENSYS MF4870dn",
     "type": "МФУ A4 (факс)",
     "serial": "NUA18783",
-    "cartridge": "HP 83X / CS-CF283X-MPSXL",
+    "cartridge": "CS-CE278X-MPS",
     "status": "OK"
   },
   {
@@ -272,7 +272,7 @@
     "model": "i-SENSYS MF416dw",
     "type": "МФУ A4 (факс)",
     "serial": "USK22984",
-    "cartridge": "HP 83X / CS-CF283X-MPSXL",
+    "cartridge": "CS-CE505XS",
     "status": "OK"
   },
   {
@@ -284,7 +284,7 @@
     "model": "i-SENSYS MF426dw",
     "type": "МФУ A4",
     "serial": "4UY21873",
-    "cartridge": "HP 83X / CS-CF283X-MPSXL",
+    "cartridge": "CS-C070H",
     "status": "OK"
   },
   {
@@ -296,7 +296,7 @@
     "model": "i-SENSYS MF4550d",
     "type": "МФУ A4 (факс)",
     "serial": "HBN71431",
-    "cartridge": "Canon FX-10 / CS-FX10-MPS",
+    "cartridge": "CS-CE278X-MPS",
     "status": "OK"
   },
   {
